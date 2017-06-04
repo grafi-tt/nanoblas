@@ -105,8 +105,8 @@ avx_kernel_loop:
 .endm
 	unroll $0
 	// termination check
-	subd $1, %edi
-	jz pack
+	subl $1, %edi
+	jz pack_restart:
 
 	// unroll 1
 	unroll $32
@@ -144,6 +144,7 @@ pack_end:
 	// termination check
 	subl $1, %edi
 	jnz avx_kernel_loop
+pack_restart:
 	// restart packing until completed
 	addl $1, %edi
 	cmp %r8d, %edx
