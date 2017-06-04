@@ -76,28 +76,28 @@ avx_kernel_loop:
 	vmovpas \offset(%r14) %ymm12
 	// c[0,] += a'[0] * b'; c[1,] += a[1] * b'
 	vshufps $0x00, %ymm8, %ymm10
-	vshufps $0x11, %ymm8, %ymm11
+	vshufps $0x55, %ymm8, %ymm11
 	vmulps %ymm10, %ymm12, %ymm14
 	vmulps %ymm11, %ymm12, %ymm15
 	vaddps %ymm0, %ymm14, %ymm0
 	vaddps %ymm1, %ymm15, %ymm1
 	// c[2,] += a'[2] * b'; c[3,] += a'[3] * b'
-	vshufps $0x22, %ymm8, %ymm10
-	vshufps $0x33, %ymm8, %ymm11
+	vshufps $0xAA, %ymm8, %ymm10
+	vshufps $0xFF, %ymm8, %ymm11
 	vmulps %ymm10, %ymm12, %ymm14
 	vmulps %ymm11, %ymm12, %ymm15
 	vaddps %ymm2, %ymm14, %ymm2
 	vaddps %ymm3, %ymm15, %ymm3
 	// c[4,] += a'[4] * b'; c[5,] += a'[5] * b'
-	vshufps $0x44, %ymm8, %ymm10
-	vshufps $0x55, %ymm8, %ymm11
+	vshufps $0x00, %ymm9, %ymm10
+	vshufps $0x55, %ymm9, %ymm11
 	vmulps %ymm10, %ymm12, %ymm14
 	vmulps %ymm11, %ymm12, %ymm15
 	vaddps %ymm4, %ymm14, %ymm4
 	vaddps %ymm5, %ymm15, %ymm5
 	// c[6,] += a'[6] * b'; c[7,] += a'[7] * b'
-	vshufps $0x66, %ymm8, %ymm10
-	vshufps $0x77, %ymm8, %ymm11
+	vshufps $0xAA, %ymm9, %ymm10
+	vshufps $0xFF, %ymm9, %ymm11
 	vmulps %ymm10, %ymm12, %ymm14
 	vmulps %ymm11, %ymm12, %ymm15
 	vaddps %ymm6, %ymm14, %ymm6
