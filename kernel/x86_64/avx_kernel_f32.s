@@ -70,8 +70,8 @@ avx_kernel_loop:
 .macro unroll offset
 	// ymm9 = (a'[8:4], a'[8:4]); ymm8 = (a'[4:0], a'[4:0]) */
 	vmovaps \offset(%r13), %ymm8
-	vperm2f128 %ymm8, %ymm8, %ymm9, 0x11
-	vperm2f128 %ymm8, %ymm8, %ymm8, 0x00
+	vperm2f128 0x11, %ymm8, %ymm8, %ymm9
+	vperm2f128 0x00, %ymm8, %ymm8, %ymm8
 	// ymm12 = b' */
 	vmovpas \offset(%r14) %ymm12
 	// c[0,] += a'[0] * b'; c[1,] += a[1] * b'
