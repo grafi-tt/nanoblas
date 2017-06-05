@@ -1,17 +1,17 @@
-/* rbp: tmp                                                                 */
+/* ebp: k_len                     (escape to stack; moved from reg)         */
 /* rsp: stack pointer                                                       */
-/* edi: k_len                                                               */
-/* esi: next_m_cnt                                                          */
-/* edx: next_m_len                                                          */
-/* ecx: next_k_cnt                                                          */
-/* r8d: next_k_len                                                          */
-/* r9: a_pack_next                                                          */
-/* r10: transa -> transa ? lda : 0 (load from stack)                        */
-/* r11: lda -> transa ? 0 : lda (load from stack)                           */
-/* r12: a (escape to stack, load from stack)                                */
-/* rax: ldc -> tmp -> a_pack_cur -> ldc (load from stack)                   */
-/* rbx: c -> b_pack_cur -> c (escape to stack; load from stack)             */
-/* r13: tmp (escape to stack)                                               */
+/* rdi: b_pack                    (init. k_len)                             */
+/* rsi: a_pack                                                              */
+/* edx: k_len_sched               (loaded from stack; init. b_pack)         */
+/* ecx: m_len_sched                                                         */
+/* r8:  a                         (loaded from stack; init. k_len_next )    */
+/* r9:  trans_a ? lda :   1       (init. trans_a, which loaded from stack)  */
+/* r10: trans_a ?   1 : lda       (init. lda, which loaded from stack)      */
+/* r11: a_pack_next               (loaded from stack)                       */
+/* rax: tmp, at begin and end ldc (loaded from stack)                       */
+/* rbx: tmp, at begin and end c   (escape to stack; loaded from stack)      */
+/* r12: tmp                       (escape to stack)                         */
+/* r13: reserved                                                            */
 /* r14: reserved                                                            */
 /* r15: reserved                                                            */
 
@@ -22,14 +22,17 @@
 avx_kernel_f32:
 	/* escape */
 	pushq %rbp
-	/* rsp = base pointer - 24 */
+	/* rsp = base pointer - 16 */
 	pushq %rbx
 	pushq %r12
-	pushq %r13
 
+	/* move some registers */
+	movl %edi %ebp
+	movl %rdx %rdi
+	movl %r8 %edx
 	/* load c */
-	movq (%rsp,80), %rax
-	movq (%rsp,88), %rbx
+	movq (%rsp,56), %rax
+	movq (%rsp,64), %rbx
 	vmovaps (%rbx), %ymm8
 	leaq (%rbx,%rax,4), %rbx
 	vmovaps (%rbx), %ymm9
@@ -47,20 +50,18 @@ avx_kernel_f32:
 	vmovaps (%rbx), %ymm15
 	leaq (%rbx,%rax,4), %rbx
 	/* lda */
-	movq (%rsp,40), %r10
-	movq (%rsp,48), %r11
+	movq (%rsp,32), %r10
 	xorl %eax, %eax
-	test %r10d, %r10d
+	test %r9d, %r9d
 	setnz %al
 	negq %rax, %rax
-	movq %r11 %r10
-	andq %rax %r10
+	movq %r10 %r9
+	andq %rax %r9
 	notq %rax, %rax
-	andq %rax, %r11
+	andq %rax, %r10
 	/* load  other */
-	movq (%rsp,56), %r12
-	movq (%rsp,64), %rax
-	movq (%rsp,72), %rbx
+	movq (%rsp,40), %r11
+	movq (%rsp,48), %r8
 
 	/* loop start */
 .align 4
@@ -69,11 +70,11 @@ avx_kernel_loop:
 	/* unroll 0 */
 .macro unroll offset
 	/* ymm1 = (a'[8:4], a'[8:4]); ymm0 = (a'[4:0], a'[4:0]) */
-	vmovaps \offset(%rax), %ymm0
+	vmovaps \offset(%rsi), %ymm0
 	vperm2f128 0x11, %ymm0, %ymm0, %ymm1
 	vperm2f128 0x00, %ymm0, %ymm0, %ymm0
 	/* ymm4 = b' */ */
-	vmovpas \offset(%rbx) %ymm4
+	vmovpas \offset(%rdi) %ymm4
 	/* c[0,] += a'[0] * b'; c[1,] += a[1] * b' */
 	vshufps $0x00, %ymm0, %ymm2
 	vshufps $0x55, %ymm0, %ymm3
@@ -105,42 +106,44 @@ avx_kernel_loop:
 .endm
 	unroll 0
 	/* termination check */
-	subl $1, %edi
+	subl $1, %ebp
 	jz pack_restart:
 
 	/* unroll 1 */
 	unroll 32
 	/* proceed pointers */
-	leaq 64(%rax)
-	leaq 64(%rbx)
+	leaq 64(%rsi)
+	leaq 64(%rdi)
 
 pack:
 	/* pack needed? */
-	cmp %ecx, %r8d
+	cmp %dl, %dh
 	je pack_end
 pack_do:
-	/* load a[m_len,k_len] */
-	movl %ecx, %ebp
-	movl %esi, %r13d
-	mulq %r10, %rbp
-	mulq %r11, %r13
-	addq %r13, %rbp
-	movq (%r12,%rbp,4), %r13
-	/* store a[m_len,k_len] */
-	movl %ecx, %ebp
-	mull %edx, %ebp
-	addl %esi, %ebp
-	movq %r13, (%rax,%rbp,4)
+	/* load a[k_cnt,m_cnt] */
+	movzbl %dl, %eax
+	movzbl %cl, %ebx
+	mulq %r9, %rax
+	mulq %r10, %rbx
+	addq %rbx, %rax
+	movl (%r8,%rax,4), %r12d
+	/* store a[k_cnt,m_cnt] */
+	movzbl %dl, %eax
+	movzbl %ch, %ebx
+	mull %eax %ebx
+	movzbl %cl %ebx
+	addl %ebx %eax
+	movl %r12d, (%r11,%rax,4)
 	/* increment */
-	addl $1, %esi
+	addl $1, %cl
 	/* eax (next_m_cnt == next_m_len) ? 1 : 0 */
-	xorl %ebp, %ebp
-	cmp %esi, %edx
-	sete %bpl
+	xorl %eax, %eax
+	cmp %cl, %ch
+	sete %al
 	/* (next_k_cnt++, next_m_cnt = 0) if moving up */
-	addl %ebp, %ecx
-	subl $1, %ebp
-	andl %ebp, %esi
+	addl %eax, %edx
+	subl $1, %eax
+	andl %al, %cl
 pack_end:
 	/* termination check */
 	subl $1, %edi
@@ -154,8 +157,8 @@ pack_restart:
 	/* loop end */
 
 	/* store c */
-	movq (%rsp,80), %rax
-	movq (%rsp,88), %rbx
+	movq (%rsp,56), %rax
+	movq (%rsp,64), %rbx
 	vmovaps %ymm8, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
 	vmovaps %ymm9, (%rbx)
@@ -174,7 +177,6 @@ pack_restart:
 	leaq (%rbx,%rax,4), %rbx
 
 	/* return */
-	popq %r13
 	popq %r12
 	popq %rbx
 	popq %rbp

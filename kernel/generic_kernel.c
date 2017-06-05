@@ -2,10 +2,10 @@
 
 __attribute__((optimize("unroll-loops")))
 void generic_kernel_##FTYPE(
-	int k_len, int next_m_cnt, int next_m_len, int next_k_cnt, int next_k_len,
-	FTYPE *restrict a_pack_next, int transa, size_t lda, FTYPE *restrict a,
-	FTYPE *restrict a_pack, FTYPE *restrict b_pack,
-	size_t ldc, FTYPE* restrict c_pack) {
+	int k_len, FTYPE *restrict a_pack, FTYPE *restrict b_pack,
+	int k_len_sched, int m_len_sched, int trans_a, size_t lda,
+	FTYPE *restrict a_pack_next, FTYPE *restrict a,
+	size_t ldc, FTYPE* restrict c) {
 
 	FTYPE[UNIT_LEN*UNIT_LEN] c_buf;
 	FTYPE *restrict c_buf_cur = c_buf;
