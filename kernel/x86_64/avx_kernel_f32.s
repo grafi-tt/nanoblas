@@ -1,182 +1,184 @@
-// edi: k_len
-// esi: next_k_len
-// edx: next_m_len
-// ecx: next_k_cnt
-// r8d: next_m_cnt
-// r9: transa -> transa ? lda : 0
-// r10: a_pack_next (load from stack)
-// r11: lda (load from stack)
-// r12: a (load from stack)
-// r13: a_pack_cur (escape to stack; load from stack)
-// r14: b_pack_cur (escape to stack; load from stack)
-// rax: ldc (load from stack) or tmp
-// rbx: c (escape to stack; load from stack) or tmp
-// r15: transa ? 0 : lda (escape to stack)
-// rbp: frame pointer
-// rsp: stack pointer
+/* rbp: tmp                                                                 */
+/* rsp: stack pointer                                                       */
+/* edi: k_len                                                               */
+/* esi: next_m_cnt                                                          */
+/* edx: next_m_len                                                          */
+/* ecx: next_k_cnt                                                          */
+/* r8d: next_k_len                                                          */
+/* r9: transa -> transa ? lda : 0                                           */
+/* r10: transa ? 0 : lda                                                    */
+/* r11: a_pack_next (load from stack)                                       */
+/* r12: lda (escape to stack, load from stack)                              */
+/* r13: a (escape to stack, load from stack)                                */
+/* rax: ldc -> tmp -> a_pack_cur -> ldc (load from stack)                   */
+/* rbx: c -> b_pack_cur -> c (escape to stack; load from stack)             */
+/* r14: tmp (escape to stack)                                               */
+/* r15: reserved                                                            */
 
 .section .text
+
+.align 4
 .globl avx_kernel_f32
 avx_kernel_f32:
-	push %rbp
-	movq %rsp, %rbp
-
-	// escape
+	/* escape */
+	pushq %rbp
+	/* rsp = base pointer - 32 */
+	pushq %rbx
+	pushq %r12
 	pushq %r13
 	pushq %r14
-	pushq %rbx
-	pushq %r15
-	// load
-	movq (%rbp,16), %r10
-	movq (%rbp,24), %r11
-	movq (%rbp,32), %r12
-	movq (%rbp,40), %r13
-	movq (%rbp,48), %r14
 
-	// lda
-	xorq %rax, %rax
+	/* load c */
+	movq (%rsp,88), %rax
+	movq (%rsp,96), %rbx
+	vmovaps (%rbx), %ymm8
+	leaq (%rbx,%rax,4), %rbx
+	vmovaps (%rbx), %ymm9
+	leaq (%rbx,%rax,4), %rbx
+	vmovaps (%rbx), %ymm10
+	leaq (%rbx,%rax,4), %rbx
+	vmovaps (%rbx), %ymm11
+	leaq (%rbx,%rax,4), %rbx
+	vmovaps (%rbx), %ymm12
+	leaq (%rbx,%rax,4), %rbx
+	vmovaps (%rbx), %ymm13
+	leaq (%rbx,%rax,4), %rbx
+	vmovaps (%rbx), %ymm14
+	leaq (%rbx,%rax,4), %rbx
+	vmovaps (%rbx), %ymm15
+	leaq (%rbx,%rax,4), %rbx
+
+	/* load */
+	movq (%rsp,48), %r11
+	movq (%rsp,56), %r12
+	movq (%rsp,64), %r13
+	movq (%rsp,72), %rax
+	movq (%rsp,80), %rbx
+
+	/* lda */
+	xorl %eax, %eax
 	test %r9d, %r9d
-	setz %al
-	negq %eax, %r15
-	notq %r15, %r9
-	andq %r11, %r15
-	andq %r11, %r9
+	setnz %al
+	negq %rax, %r9
+	notq %r9, %r10
+	andq %r12, %r9
+	andq %r12, %r10
 
-	// load c
-	movq (%rbp,56), %rax
-	movq (%rbp,64), %rbx
-	vmovaps (%rbx), %ymm0
-	leaq (%rbx,%rax,4), %rbx
-	vmovaps (%rbx), %ymm1
-	leaq (%rbx,%rax,4), %rbx
-	vmovaps (%rbx), %ymm2
-	leaq (%rbx,%rax,4), %rbx
-	vmovaps (%rbx), %ymm3
-	leaq (%rbx,%rax,4), %rbx
-	vmovaps (%rbx), %ymm4
-	leaq (%rbx,%rax,4), %rbx
-	vmovaps (%rbx), %ymm5
-	leaq (%rbx,%rax,4), %rbx
-	vmovaps (%rbx), %ymm6
-	leaq (%rbx,%rax,4), %rbx
-	vmovaps (%rbx), %ymm7
-	leaq (%rbx,%rax,4), %rbx
-
-	// loop start
-.align 5
+	/* loop start */
+.align 4
 avx_kernel_loop:
 
-	// unroll 0
+	/* unroll 0 */
 .macro unroll offset
-	// ymm9 = (a'[8:4], a'[8:4]); ymm8 = (a'[4:0], a'[4:0]) */
-	vmovaps \offset(%r13), %ymm8
-	vperm2f128 0x11, %ymm8, %ymm8, %ymm9
-	vperm2f128 0x00, %ymm8, %ymm8, %ymm8
-	// ymm12 = b' */
-	vmovpas \offset(%r14) %ymm12
-	// c[0,] += a'[0] * b'; c[1,] += a[1] * b'
-	vshufps $0x00, %ymm8, %ymm10
-	vshufps $0x55, %ymm8, %ymm11
-	vmulps %ymm10, %ymm12, %ymm14
-	vmulps %ymm11, %ymm12, %ymm15
-	vaddps %ymm0, %ymm14, %ymm0
-	vaddps %ymm1, %ymm15, %ymm1
-	// c[2,] += a'[2] * b'; c[3,] += a'[3] * b'
-	vshufps $0xAA, %ymm8, %ymm10
-	vshufps $0xFF, %ymm8, %ymm11
-	vmulps %ymm10, %ymm12, %ymm14
-	vmulps %ymm11, %ymm12, %ymm15
-	vaddps %ymm2, %ymm14, %ymm2
-	vaddps %ymm3, %ymm15, %ymm3
-	// c[4,] += a'[4] * b'; c[5,] += a'[5] * b'
-	vshufps $0x00, %ymm9, %ymm10
-	vshufps $0x55, %ymm9, %ymm11
-	vmulps %ymm10, %ymm12, %ymm14
-	vmulps %ymm11, %ymm12, %ymm15
-	vaddps %ymm4, %ymm14, %ymm4
-	vaddps %ymm5, %ymm15, %ymm5
-	// c[6,] += a'[6] * b'; c[7,] += a'[7] * b'
-	vshufps $0xAA, %ymm9, %ymm10
-	vshufps $0xFF, %ymm9, %ymm11
-	vmulps %ymm10, %ymm12, %ymm14
-	vmulps %ymm11, %ymm12, %ymm15
-	vaddps %ymm6, %ymm14, %ymm6
-	vaddps %ymm7, %ymm15, %ymm7
+	/* ymm1 = (a'[8:4], a'[8:4]); ymm0 = (a'[4:0], a'[4:0]) */ */
+	vmovaps \offset(%rax), %ymm0
+	vperm2f128 0x11, %ymm0, %ymm0, %ymm1
+	vperm2f128 0x00, %ymm0, %ymm0, %ymm0
+	/* ymm4 = b' */ */
+	vmovpas \offset(%r14) %ymm4
+	/* c[0,] += a'[0] * b'; c[1,] += a[1] * b' */
+	vshufps $0x00, %ymm0, %ymm2
+	vshufps $0x55, %ymm0, %ymm3
+	vmulps %ymm2, %ymm4, %ymm6
+	vmulps %ymm3, %ymm4, %ymm7
+	vaddps %ymm8, %ymm6, %ymm8
+	vaddps %ymm9, %ymm7, %ymm9
+	/* c[2,] += a'[2] * b'; c[3,] += a'[3] * b' */
+	vshufps $0xAA, %ymm0, %ymm2
+	vshufps $0xFF, %ymm0, %ymm3
+	vmulps %ymm2, %ymm4, %ymm6
+	vmulps %ymm3, %ymm4, %ymm7
+	vaddps %ymm10, %ymm6, %ymm10
+	vaddps %ymm11, %ymm7, %ymm11
+	/* c[4,] += a'[4] * b'; c[5,] += a'[5] * b' */
+	vshufps $0x00, %ymm1, %ymm2
+	vshufps $0x55, %ymm1, %ymm3
+	vmulps %ymm2, %ymm4, %ymm6
+	vmulps %ymm3, %ymm4, %ymm7
+	vaddps %ymm12, %ymm6, %ymm12
+	vaddps %ymm13, %ymm7, %ymm13
+	/* c[6,] += a'[6] * b'; c[7,] += a'[7] * b' */
+	vshufps $0xAA, %ymm1, %ymm2
+	vshufps $0xFF, %ymm1, %ymm3
+	vmulps %ymm2, %ymm4, %ymm6
+	vmulps %ymm3, %ymm4, %ymm7
+	vaddps %ymm14, %ymm6, %ymm14
+	vaddps %ymm15, %ymm7, %ymm15
 .endm
 	unroll $0
-	// termination check
+	/* termination check */
 	subl $1, %edi
 	jz pack_restart:
 
-	// unroll 1
+	/* unroll 1 */
 	unroll $32
 	/* proceed pointers */
 	leaq 64(%r13)
 	leaq 64(%r14)
 
 pack:
-	// pack needed?
-	cmp %r8d, %edx
-	jz pack_end
-	// load a[m_len,k_len]
-	movq %rcx, %rax
-	movq %r8, %rbx
-	mulq %r9, %rax
-	mulq %r15, %rbx
-	addq %rbx, %rax
-	movq (%r12,%rax,4), %rbx
-	// store a[m_len,k_len]
-	movl %ecx, %eax
-	mull %edx, %eax
-	addl %r8d, %eax
-	movq %rbx, (%r13,%rax,4)
-	// increment
-	addl $1, %r8d
-	// eax (next_m_cnt == next_m_len) ? 1 : 0
-	xorl %eax, %eax
-	cmp %r8d, %edx
-	sete %al
-	// (next_k_cnt++, next_m_cnt = 0) if moving up
-	addl %eax, %ecx
-	subl $1, %eax
-	andl %eax, %edx
+	/* pack needed? */
+	cmp %ecx, %r8d
+	je pack_end
+pack_do:
+	/* load a[m_len,k_len] */
+	movl %ecx, %ebp
+	movl %esi, %r14d
+	mulq %r9, %rbp
+	mulq %r10, %r14
+	addq %r14, %rbp
+	movq (%r13,%rbp,4), %r14
+	/* store a[m_len,k_len] */
+	movl %ecx, %ebp
+	mull %edx, %ebp
+	addl %esi, %ebp
+	movq %r14, (%rax,%rbp,4)
+	/* increment */
+	addl $1, %esi
+	/* eax (next_m_cnt == next_m_len) ? 1 : 0 */
+	xorl %ebp, %ebp
+	cmp %esi, %edx
+	sete %bpl
+	/* (next_k_cnt++, next_m_cnt = 0) if moving up */
+	addl %ebp, %ecx
+	subl $1, %ebp
+	andl %ebp, %esi
 pack_end:
-	// termination check
+	/* termination check */
 	subl $1, %edi
 	jnz avx_kernel_loop
 pack_restart:
-	// restart packing until completed
+	/* restart packing until completed */
 	addl $1, %edi
-	cmp %r8d, %edx
-	jnz pack
+	cmp %ecx, %r8d
+	jnz pack_do:
 
-avx_kernel_loop_end:
+	/* loop end */
 
-	// store c
-	movq (%rbp,56), %rax
-	movq (%rbp,64), %rbx
-	vmovaps %ymm0, (%rbx)
+	/* store c */
+	movq (%rsp,88), %rax
+	movq (%rsp,96), %rbx
+	vmovaps %ymm8, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
-	vmovaps %ymm1, (%rbx)
+	vmovaps %ymm9, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
-	vmovaps %ymm2, (%rbx)
+	vmovaps %ymm10, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
-	vmovaps %ymm3, (%rbx)
+	vmovaps %ymm11, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
-	vmovaps %ymm4, (%rbx)
+	vmovaps %ymm12, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
-	vmovaps %ymm5, (%rbx)
+	vmovaps %ymm13, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
-	vmovaps %ymm6, (%rbx)
+	vmovaps %ymm14, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
-	vmovaps %ymm7, (%rbx)
+	vmovaps %ymm15, (%rbx)
 	leaq (%rbx,%rax,4), %rbx
 
-	// return
-	popq %r15
-	popq %rbx
+	/* return */
 	popq %r14
 	popq %r13
-	movq %rbp, %rsp
+	popq %r12
+	popq %rbx
 	popq %rbp
 	ret

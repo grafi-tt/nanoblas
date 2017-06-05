@@ -2,7 +2,7 @@
 
 __attribute__((optimize("unroll-loops")))
 void generic_kernel_##FTYPE(
-	int k_len, int next_k_len, int next_m_len, int next_k_cnt, int next_m_cnt,
+	int k_len, int next_m_cnt, int next_m_len, int next_k_cnt, int next_k_len,
 	int transa, FTYPE *restrict a_pack_next, size_t lda,
 	FTYPE *restrict a, FTYPE *restrict a_pack, FTYPE *restrict b_pack,
 	size_t ldc, FTYPE* restrict c_pack) {
@@ -48,8 +48,9 @@ void generic_kernel_##FTYPE(
 		b_pack += 2*UNIT_LEN;
 
 		/* pack */
-	pack:
-		if (k_cnt != next_k_cnt) {
+		pack:
+		if (next_k_cnt != next_k_len) {
+			pack_do:
 			a_pack[next_m_len*next_k_cnt + next_m_len] =
 				a[next_k_cnt*lda_if_transa + next_m_cnt*lda_if_not_transa];
 			int moving_up = next_m_cnt++ == next_m_len;
@@ -59,5 +60,5 @@ void generic_kernel_##FTYPE(
 	} while (k_len-- != 0);
 	/* restart packing until completed */
 	k_len++;
-	if (next_k_cnt != next_k_len) goto pack;
+	if (next_k_cnt != next_k_len) goto pack_do;
 }
