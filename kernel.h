@@ -2,7 +2,7 @@
 #define NANOBLAS_KERNEL_H
 
 #include <stddef.h>
-#include "config.h"
+#include "const.h"
 
 typedef void (*kernel_t)(
 	int k_len, int next_k_len, int next_m_len, int next_k_cnt, int next_m_cnt,

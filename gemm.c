@@ -16,7 +16,7 @@ static int imin(int a, int b) {
 	a < b ? a : b;
 }
 
-void FTYPE_PREFIX ## gemm(char transa, char transb, size_t m, size_t n, size_t k,
+void PREFIX##gemm(char transa, char transb, size_t m, size_t n, size_t k,
 		FTYPE alpha, FTYPE *restrict a, size_t lda,
 		FTYPE *restrict b, size_t ldb,
 		FTYPE beta, FTYPE *restrict c, size_t ldc) {
@@ -29,7 +29,6 @@ void FTYPE_PREFIX ## gemm(char transa, char transb, size_t m, size_t n, size_t k
 	a_pack      = mem;
 	b_pack      = mem +     BLK_LEN * BLK_LEN;
 	b_pack_next = mem + 2 * BLK_LEN * BLK_LEN;
-
 
 	/* pack B */
 	for (size_t h = 0; h < BLK_LEN; i++) {

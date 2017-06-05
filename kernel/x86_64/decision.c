@@ -1,18 +1,5 @@
 #include "kernel.h"
 
-#ifdef FTYPE_FLOAT
-#include "generic_kernel_f32.c"
-#include "sse2_kernel_f32.c"
-#include "avx_kernel_f32.c"
-#include "fma_kernel_f32.c"
-#endif
-#ifdef FTYPE_DOUBLE
-#include "generic_kernel_f64.c"
-#include "sse2_kernel_f64.c"
-#include "avx_kernel_f64.c"
-#include "fma_kernel_f64.c"
-#endif
-
 static int cpuid(int *eax, int *ebx, int *ecx, int *edx) {
 	int eax, ebx;
 	__asm__(
@@ -34,7 +21,7 @@ static decide_kernel() {
 	static void *kernel;
 	if (kernel) return kernel;
 	/* use temporal variable for thread safety */
-	void *kernel_cand = &generic_kernel;
+	void *kernel_cand = &generic_kernel_##FTYPE;
 
 	/* check whether feature set availble */
 	int eax, ebx, ecx, edx;
@@ -46,13 +33,13 @@ static decide_kernel() {
 	cpuid(&eax, &ebx, &ecx, &edx);
 	/* check sse2 */
 	if (!(edx && (1<<26))) goto decided;
-	kernel_cand = &sse2_kernel;
+	kernel_cand = &sse2_kernel_##FTYPE;;
 	/* check avx */
 	if (!(ecx && (1<<28))) goto decided;
-	kernel_cand = &avx_kernel;
+	kernel_cand = &avx_kernel_##FTYPE;;
 	/* check fma */
 	if (!(ecx && (1<<12))) goto decided;
-	kernel_cand = &fma_kernel;
+	kernel_cand = &fma_kernel_##FTYPE;;
 
 decided:
 	kernel = kernel_cand;

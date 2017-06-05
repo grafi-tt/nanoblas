@@ -1,7 +1,7 @@
 #ifndef NANOBLAS_KERNEL_BOUNDARY_H
 #define NANOBLAS_KERNEL_BOUNDARY_H
 
-#include "config.h"
+#include "const.h"
 
 void boundary_kernel(
 		int len, int m, int n
