@@ -73,7 +73,7 @@ avx_kernel_loop:
 	vperm2f128 0x11, %ymm0, %ymm0, %ymm1
 	vperm2f128 0x00, %ymm0, %ymm0, %ymm0
 	/* ymm4 = b' */ */
-	vmovpas \offset(%r13) %ymm4
+	vmovpas \offset(%rbx) %ymm4
 	/* c[0,] += a'[0] * b'; c[1,] += a[1] * b' */
 	vshufps $0x00, %ymm0, %ymm2
 	vshufps $0x55, %ymm0, %ymm3
@@ -111,8 +111,8 @@ avx_kernel_loop:
 	/* unroll 1 */
 	unroll $32
 	/* proceed pointers */
-	leaq 64(%r12)
-	leaq 64(%r13)
+	leaq 64(%rax)
+	leaq 64(%rbx)
 
 pack:
 	/* pack needed? */
