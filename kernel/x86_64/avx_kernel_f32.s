@@ -103,13 +103,13 @@ avx_kernel_loop:
 	vaddps %ymm14, %ymm6, %ymm14
 	vaddps %ymm15, %ymm7, %ymm15
 .endm
-	unroll $0
+	unroll 0
 	/* termination check */
 	subl $1, %edi
 	jz pack_restart:
 
 	/* unroll 1 */
-	unroll $32
+	unroll 32
 	/* proceed pointers */
 	leaq 64(%rax)
 	leaq 64(%rbx)
