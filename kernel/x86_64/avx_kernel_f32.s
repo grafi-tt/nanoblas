@@ -149,7 +149,7 @@ pack_restart:
 	/* restart packing until completed */
 	addl $1, %edi
 	cmp %ecx, %r8d
-	jnz pack_do:
+	jne pack_do:
 
 	/* loop end */
 
