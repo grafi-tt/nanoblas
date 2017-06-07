@@ -7,6 +7,9 @@ void generic_kernel_##FTYPE(
 	FTYPE *restrict a_pack_next, FTYPE *restrict a,
 	size_t ldc, FTYPE* restrict c) {
 
+	int k_cnt = 0;
+	int m_cnt = 0;
+
 	FTYPE[UNIT_LEN*UNIT_LEN] c_buf;
 	FTYPE *restrict c_buf_cur = c_buf;
 	FTYPE *restrict c_cur = c;
@@ -49,16 +52,16 @@ void generic_kernel_##FTYPE(
 
 		/* pack */
 		pack:
-		if (next_k_cnt != next_k_len) {
+		if (k_cnt != k_len_sched) {
 			pack_do:
-			a_pack[next_m_len*next_k_cnt + next_m_len] =
-				a[next_k_cnt*lda_if_transa + next_m_cnt*lda_if_not_transa];
-			int moving_up = next_m_cnt++ == next_m_len;
-			next_k_cnt += moving_up;
-			next_m_cnt &= moving_up--;
+			a_pack[m_len_sched*k_cnt + m_len_sched] =
+				a[k_cnt*lda_if_transa + m_cnt*lda_if_not_transa];
+			int moving_up = m_cnt++ == m_len_sched;
+			k_cnt += moving_up;
+			m_cnt &= moving_up--;
 		}
 	} while (k_len-- != 0);
 	/* restart packing until completed */
 	k_len++;
-	if (next_k_cnt != next_k_len) goto pack_do;
+	if (k_cnt != k_len_sched) goto pack_do;
 }

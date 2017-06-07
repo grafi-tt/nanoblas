@@ -26,13 +26,18 @@ void PREFIX##gemm(char transa, char transb, size_t m, size_t n, size_t k,
 
 	int trans_a = transa == 'T';
 	int trans_b = transb == 'T';
+	interval_k_in_a = trans_a ? lda : 1;
+	interval_m_in_a = trans_a ? 1 : lda;
+	interval_k_in_b = trans_a ? 1 : ldb;
+	interval_n_in_b = trans_a ? ldb : 1;
+
 	static void* kernel = decide_kernel();
 
 	/* I believe this >1M memory never happen to be unaligned */
-	FTYPE *mem = (FTYPE*)malloc(sizeof(FTYPE) * BLK_LEN * BLK_LEN * 3);
-	FTYPE *restrict a_pack, b_pack, a_pack_next, b_pack_next;
-	a_pack      = mem;
-	b_pack      = mem +     BLK_LEN * BLK_LEN; b_pack_next = mem + 2 * BLK_LEN * BLK_LEN;
+	FTYPE *mem = (FTYPE*)malloc(sizeof(FTYPE)*3*BLK_LEN*BLK_LEN);
+	FTYPE *restrict a_pack = mem;
+	FTYPE *restrict b_pack = mem + BLK_LEN*BLK_LEN;
+	FTYPE *restrict b_pack_next = mem + 2*BLK_LEN*BLK_LEN;
 
 	/* pack B */
 	for (size_t h = 0; h < BLK_LEN; i++) {
@@ -72,7 +77,6 @@ void PREFIX##gemm(char transa, char transb, size_t m, size_t n, size_t k,
 					k_len_next = 0;
 				}
 
-				int a_pack_row_cnt = 0;
 				int m_len_next_packed = 0;
 				int one_row_loop_cnt = 0;
 				const int a_pack_next_k_len_base = k_len_next / LOOP_N_TO_PACK_ONE_ROW;
@@ -84,24 +88,28 @@ void PREFIX##gemm(char transa, char transb, size_t m, size_t n, size_t k,
 						const int m_len = imax(0, imin(m - m_cur, UNIT_LEN));
 
 						int k_len_sched = a_pack_next_k_len_base + (one_row_loop_cnt < one_row_loop_k_len_step);
-						int m_len_sched = imax(0, imin(m_len_next_packed - m_len_next));
+						int m_len_sched = imax(0, imin(UNIT_LEN, m_len_next - m_len_next_packed));
 
 						FSIZE *a_pack_cur = a_pack;
 						FSIZE *b_pack_cur = b_pack;
+						FSIZE *a_pack_next_cur = a_pack_next;
+						FSIZE *a_cur = a;
+
 						if (n_len == UNIT_LEN && m_len == UNIT_LEN) {
 							kernel(k_len, a_pack_cur, b_pack_cur,
 									k_len_sched, m_len_sched, trans_a, lda, a_pack_next_cur, a, ldc, c);
 						} else {
 							remainder_product(k_len, m_len, n_len, a_pack_cur, b_pack_cur, ldc, c);
 						}
+
 						a_pack_cur += k_len * m_len;
 						b_pack_cur += k_len * n_len;
-						a_pack_next_cur += a_pack_next_k_len * a_pack_next_m_len;
+						a_pack_next_cur += k_len_sched * m_len_sched;
 
 						if (one_row_loop_cnt++ == LOOP_N_TO_PACK_ONE_ROW) {
 							one_row_loop_cnt = 0;
-							a_pack_row_cnt++;
-							m_len_next_packed += UNIT_LEN;
+							a_cur += (transa ? 1 : lda) * m_len_sched;
+							m_len_next_packed += m_len_sched;
 						}
 					}
 				}

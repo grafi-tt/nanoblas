@@ -1,4 +1,6 @@
 #include "kernel.h"
+#include "kernel/generic_kernel.h"
+#include "kernel/x86_64/avx_kernel.h"
 
 static int cpuid(int *eax, int *ebx, int *ecx, int *edx) {
 	int eax, ebx;
@@ -16,9 +18,9 @@ static int cpuid(int *eax, int *ebx, int *ecx, int *edx) {
 	return i;
 }
 
-static decide_kernel() {
+decide_kernel() {
 	/* cache */
-	static void *kernel;
+	static kernel_t *kernel;
 	if (kernel) return kernel;
 	/* use temporal variable for thread safety */
 	void *kernel_cand = &generic_kernel_##FTYPE;
@@ -33,13 +35,13 @@ static decide_kernel() {
 	cpuid(&eax, &ebx, &ecx, &edx);
 	/* check sse2 */
 	if (!(edx && (1<<26))) goto decided;
-	kernel_cand = &sse2_kernel_##FTYPE;;
+	/* kernel_cand = &sse2_kernel_##FTYPE; */
 	/* check avx */
 	if (!(ecx && (1<<28))) goto decided;
-	kernel_cand = &avx_kernel_##FTYPE;;
+	kernel_cand = &avx_kernel_##FTYPE;
 	/* check fma */
 	if (!(ecx && (1<<12))) goto decided;
-	kernel_cand = &fma_kernel_##FTYPE;;
+	/* kernel_cand = &fma_kernel_##FTYPE; */
 
 decided:
 	kernel = kernel_cand;

@@ -13,3 +13,5 @@ typedef void (*kernel_t)(
 kernel_t *decide_kernel();
 
 #define LOOP_N_TO_PACK_ONE_ROW (BLK_LEN / UNIT_LEN)
+
+#endif
