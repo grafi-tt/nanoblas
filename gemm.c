@@ -1,7 +1,6 @@
 #include "gemm.h"
-#include "const.h"
+#include "boundary.h"
 #include "kernel.h"
-#include "pack.h"
 #include "util.h"
 
 void PREFIX##gemm(char transa, char transb, size_t m, size_t n, size_t k,
@@ -23,6 +22,8 @@ void PREFIX##gemm(char transa, char transb, size_t m, size_t n, size_t k,
 	FTYPE *restrict a_pack = mem;
 	FTYPE *restrict b_pack = mem + BLK_LEN*BLK_LEN;
 	FTYPE *restrict b_next_pack = mem + 2*BLK_LEN*BLK_LEN;
+	/* pack A */
+	pack_block_##FTYPE(k_len, m_len, interval_k_in_a, interval_m, pack_a, a);
 
 	/* block loop k */
 	for (size_t k_pos = 0; k_pos < k; k_pos += BLK_LEN) {
@@ -74,11 +75,13 @@ void PREFIX##gemm(char transa, char transb, size_t m, size_t n, size_t k,
 						int k_sched_len = imin(UNIT_LEN, k_next_len - k_sched_cnt);
 						/* run kernel */
 						if (n_sub_len == UNIT_LEN && m_sub_len == UNIT_LEN) {
-							kernel(k_len, a_pack_cur, b_pack_cur,
+							kernel(a_pack_cur, b_pack_cur,
 									k_sched_len, m_sched_len, interval_k_in_a, interval_m,
-									a_next_pack_cur, a_next_cur, ldc, c);
+									a_next_pack_cur, a_next_cur, k_len, c, ldc);
 						} else {
-							remainder_product(k_len, m_len, n_len, a_pack_cur, b_pack_cur, ldc, c);
+							boundary_kernel(m_len, n_len, a_pack_cur, b_pack_cur,
+									k_sched_len, m_sched_len, interval_k_in_a, interval_m,
+									a_next_pack_cur, a_next_cur, k_len, c, ldc);
 						}
 						a_pack_cur += k_len * m_len;
 						b_pack_cur += k_len * n_len;

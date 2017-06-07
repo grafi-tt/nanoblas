@@ -5,10 +5,10 @@
 #include "const.h"
 
 typedef void (*kernel_t)(
-	int k_len, FTYPE *restrict a_pack, FTYPE *restrict b_pack,
-	int k_len_sched, int m_len_sched, int trans_a, size_t lda,
-	FTYPE *restrict a_pack_next, FTYPE *restrict a,
-	size_t ldc, FTYPE* restrict c) {
+	FTYPE *restrict a_pack, FTYPE *restrict b_pack,
+	int k_sched_len, int m_sched_len, size_t interval_k_in_a, size_t interval_m,
+	FTYPE *restrict a_next_pack, FTYPE *restrict a_next,
+	/*for stack alignment*/ size_t k_len_szt, FTYPE* restrict c, size_t ldc) {
 
 kernel_t *decide_kernel();
 

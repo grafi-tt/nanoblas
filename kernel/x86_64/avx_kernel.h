@@ -1,7 +1,12 @@
+#ifndef NANOBLAS_KERNEL_X86_64_AVX_KERNEL_H
+#define NANOBLAS_KERNEL_X86_64_AVX_KERNEL_H
+
 #include "kernel.h"
 
 void avx_kernel_##FTYPE(
-	int k_len, FTYPE *restrict a_pack, FTYPE *restrict b_pack,
-	int k_len_sched, int m_len_sched, int trans_a, size_t lda,
-	FTYPE *restrict a_pack_next, FTYPE *restrict a,
-	size_t ldc, FTYPE* restrict c);
+	FTYPE *restrict a_pack, FTYPE *restrict b_pack,
+	int k_sched_len, int m_sched_len, size_t interval_k_in_a, size_t interval_m,
+	FTYPE *restrict a_next_pack, FTYPE *restrict a_next,
+	size_t k_len_szt, FTYPE* restrict c, size_t ldc);
+
+#endif

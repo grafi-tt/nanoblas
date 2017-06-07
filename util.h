@@ -1,7 +1,7 @@
 #ifndef NANOBLAS_UTIL_H
 #define NANOBLAS_UTIL_H
 
-#include "config.h"
+#include "const.h"
 
 static inline int imin(int a, int b) {
 	a < b ? a : b;

@@ -15,21 +15,23 @@ void pack_block_##FTYPE(int k_len, int m_or_n_len, size_t interval_k, size_t int
 	}
 }
 
-
 void boundary_kernel_##FTYPE(
-		int len, int m, int n
-		FTYPE *restrict a_pack_cur, FTYPE *restrict b_pack_cur,
-		size_t ldc, FTYPE *restrict c) {
+		int m_sub_len, int n_sub_len, FTYPE *restrict a_pack, FTYPE *restrict b_pack,
+		int k_sched_len, int m_sched_len, size_t interval_k_in_a, size_t interval_m,
+		FTYPE *restrict a_next_pack, FTYPE *restrict a_next,
+		size_t k_len_szt, FTYPE *restrict c, size_t ldc) {
+
+	int k_len = k_len_szt;
 
 	FTYPE[UNIT_LEN*UNIT_LEN] c_buf;
 	FTYPE *restrict c_buf_cur = c_buf;
 	FTYPE *restrict c_cur = c;
 
-	for (int i = 0; i < m; i++) {
-		for (int j = 0; j < n; j++) {
+	for (int i = 0; i < m_sub_len; i++) {
+		for (int j = 0; j < n_sub_len; j++) {
 			c_buf_cur[j] = c_cur[j];
 		}
-		c_buf_cur += n;
+		c_buf_cur += n_sub_len;
 		c_cur += ldc;
 	}
 	c_buf_cur = c_buf;
@@ -48,11 +50,13 @@ void boundary_kernel_##FTYPE(
 		c_buf_cur = c_buf;
 	}
 
-	for (int i = 0; i < m; i++) {
-		for (int j = 0; j < n; j++) {
+	for (int i = 0; i < m_sub_len; i++) {
+		for (int j = 0; j < n_sub_len; j++) {
 			c_cur[j] = c_buf_cur[j];
 		}
-		c_buf_cur += n;
+		c_buf_cur += n_sub_len;
 		c_cur += ldc;
 	}
+
+	pack_block_##FTYPE(k_sched_len, m_sched_len, interval_k_in_a, interval_m, a_next_pack, a_next);
 }

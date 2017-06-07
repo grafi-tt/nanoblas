@@ -1,5 +1,5 @@
-#ifndef NANOBLAS_CONFIG_H
-#define NANOBLAS_CONFIG_H
+#ifndef NANOBLAS_CONST_H
+#define NANOBLAS_CONST_H
 
 typedef float f32;
 typedef double f64;
