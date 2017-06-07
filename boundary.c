@@ -1,6 +1,9 @@
-#include "bondary_patch.h"
+#include "bondary.h"
+#include "const.h"
+#include "util.h"
 
-void pack_block(int k_len, int m_or_n_len, size_t interval_k, size_t interval_m_or_n, FTYPE *restrict pack, FTYPE *restrict a_or_b) {
+void pack_block_##FTYPE(int k_len, int m_or_n_len, size_t interval_k, size_t interval_m_or_n,
+		FTYPE *restrict pack, FTYPE *restrict a_or_b) {
 	for (int m_or_n_pos = 0; m_or_n_pos < m_or_n_len; m_or_n_pos += UNIT_LEN) {
 		m_or_n_sub_len = imin(m_or_n_len - m_or_n_pos, UNIT_LEN);
 		for (int k_cur = 0; k_cur < k_len; k_cur++) {
@@ -13,7 +16,7 @@ void pack_block(int k_len, int m_or_n_len, size_t interval_k, size_t interval_m_
 }
 
 
-void boundary_kernel(
+void boundary_kernel_##FTYPE(
 		int len, int m, int n
 		FTYPE *restrict a_pack_cur, FTYPE *restrict b_pack_cur,
 		size_t ldc, FTYPE *restrict c) {
