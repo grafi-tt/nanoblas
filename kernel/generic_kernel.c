@@ -1,18 +1,18 @@
-#include "kernel.h"
+#include "generic_kernel.h"
 
 __attribute__((optimize("unroll-loops")))
-void generic_kernel_##FTYPE(
-	FTYPE *restrict a_pack, FTYPE *restrict b_pack,
+void generic_kernel(
+	const FTYPE *restrict a_pack, const FTYPE *restrict b_pack,
 	int k_sched_len, int m_sched_len, size_t interval_k_in_a, size_t interval_m,
-	FTYPE *restrict a_next_pack, FTYPE *restrict a_next,
-	size_t k_len_szt, size_t ldc, FTYPE* restrict c) {
+	FTYPE *restrict a_next_pack, const FTYPE *restrict a_next,
+	size_t k_len_szt, FTYPE* restrict c, size_t ldc) {
 
 	int k_len = k_len_szt;
 
 	int k_cnt = 0;
 	int m_cnt = 0;
 
-	FTYPE[UNIT_LEN*UNIT_LEN] c_buf;
+	FTYPE c_buf[UNIT_LEN*UNIT_LEN];
 	FTYPE *restrict c_buf_cur = c_buf;
 	FTYPE *restrict c_cur = c;
 
@@ -54,8 +54,8 @@ void generic_kernel_##FTYPE(
 		pack:
 		if (k_cnt != k_sched_len) {
 			pack_do:
-			a_pack[m_sched_len*k_cnt + m_cnt] =
-				a[interval_k_in_a*k_cnt + interval_m*m_cnt];
+			a_next_pack[m_sched_len*k_cnt + m_cnt] =
+				a_next[interval_k_in_a*k_cnt + interval_m*m_cnt];
 			int moving_up = m_cnt++ == m_sched_len;
 			k_cnt += moving_up;
 			m_cnt &= moving_up--;

@@ -8,13 +8,15 @@ typedef double f64;
 
 #ifdef USE_F32
 #define FTYPE f32
-#define BLK_SZ 96
+#define BLK_LEN 128
+#define UNIT_LEN 8
 #define PREFIX s
 #endif
 
 #ifdef USE_F64
 #define FTYPE f64
-#define BLK_SZ 128
+#define BLK_LEN 96
+#define UNIT_LEN 8
 #define PREFIX d
 #endif
 
@@ -23,3 +25,11 @@ typedef double f64;
 #endif
 
 #endif
+
+#define APPEND_FTYPE(name) APPEND_FTYPE_HELPER1(name, FTYPE)
+#define APPEND_FTYPE_HELPER1(name, typ) APPEND_FTYPE_HELPER2(name, typ)
+#define APPEND_FTYPE_HELPER2(name, typ) name##_##typ
+
+#define ADD_PREFIX(name) ADD_PREFIX_HELPER1(name, PREFIX)
+#define ADD_PREFIX_HELPER1(name, typ) ADD_PREFIX_HELPER2(name, typ)
+#define ADD_PREFIX_HELPER2(name, typ) typ##name

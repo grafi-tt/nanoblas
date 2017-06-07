@@ -6,10 +6,11 @@
 static inline int imin(int a, int b) {
 	a < b ? a : b;
 }
-static inline int iman(int a, int b) {
+static inline int imax(int a, int b) {
 	a > b ? a : b;
 }
-static inline void PREFIX##swap(FTYPE **restrict p, FTYPE **restrict q) {
+#define fswap APPEND_FTYPE(fswap)
+static inline void fswap(FTYPE *restrict *restrict p, FTYPE *restrict *restrict q) {
 	FTYPE *tmp = *p;
 	*p = *q;
 	*q = tmp;

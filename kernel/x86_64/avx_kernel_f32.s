@@ -27,12 +27,12 @@ avx_kernel_f32:
 	pushq %r12
 
 	/* load */
-	movq (%rsp,32), %r10
-	movq (%rsp,40), %r11
-	movl (%rsp,48), %ebp
+	movq 32(%rsp), %r10
+	movq 40(%rsp), %r11
+	movl 48(%rsp), %ebp
 	/* load c */
-	movq (%rsp,56), %rax
-	movq (%rsp,64), %rbx
+	movq 56(%rsp), %rax
+	movq 64(%rsp), %rbx
 	vmovaps (%rax), %ymm8
 	leaq (%rax,%rbx,4), %rax
 	vmovaps (%rax), %ymm9
@@ -58,34 +58,34 @@ avx_kernel_loop:
 .macro unroll offset
 	/* ymm1 = (a'[8:4], a'[8:4]); ymm0 = (a'[4:0], a'[4:0]) */
 	vmovaps \offset(%rdi), %ymm0
-	vperm2f128 0x11, %ymm0, %ymm0, %ymm1
-	vperm2f128 0x00, %ymm0, %ymm0, %ymm0
-	/* ymm4 = b' */ */
-	vmovpas \offset(%rsi) %ymm4
+	vperm2f128 $0x11, %ymm0, %ymm0, %ymm1
+	vperm2f128 $0x00, %ymm0, %ymm0, %ymm0
+	/* ymm4 = b' */
+	vmovaps \offset(%rsi), %ymm4
 	/* c[0,] += a'[0] * b'; c[1,] += a[1] * b' */
-	vshufps $0x00, %ymm0, %ymm2
-	vshufps $0x55, %ymm0, %ymm3
+	vshufps $0x00, %ymm0, %ymm0, %ymm2
+	vshufps $0x55, %ymm0, %ymm0, %ymm3
 	vmulps %ymm2, %ymm4, %ymm6
 	vmulps %ymm3, %ymm4, %ymm7
 	vaddps %ymm8, %ymm6, %ymm8
 	vaddps %ymm9, %ymm7, %ymm9
 	/* c[2,] += a'[2] * b'; c[3,] += a'[3] * b' */
-	vshufps $0xAA, %ymm0, %ymm2
-	vshufps $0xFF, %ymm0, %ymm3
+	vshufps $0xAA, %ymm0, %ymm0, %ymm2
+	vshufps $0xFF, %ymm0, %ymm0, %ymm3
 	vmulps %ymm2, %ymm4, %ymm6
 	vmulps %ymm3, %ymm4, %ymm7
 	vaddps %ymm10, %ymm6, %ymm10
 	vaddps %ymm11, %ymm7, %ymm11
 	/* c[4,] += a'[4] * b'; c[5,] += a'[5] * b' */
-	vshufps $0x00, %ymm1, %ymm2
-	vshufps $0x55, %ymm1, %ymm3
+	vshufps $0x00, %ymm1, %ymm1, %ymm2
+	vshufps $0x55, %ymm1, %ymm1, %ymm3
 	vmulps %ymm2, %ymm4, %ymm6
 	vmulps %ymm3, %ymm4, %ymm7
 	vaddps %ymm12, %ymm6, %ymm12
 	vaddps %ymm13, %ymm7, %ymm13
 	/* c[6,] += a'[6] * b'; c[7,] += a'[7] * b' */
-	vshufps $0xAA, %ymm1, %ymm2
-	vshufps $0xFF, %ymm1, %ymm3
+	vshufps $0xAA, %ymm1, %ymm1, %ymm2
+	vshufps $0xFF, %ymm1, %ymm1, %ymm3
 	vmulps %ymm2, %ymm4, %ymm6
 	vmulps %ymm3, %ymm4, %ymm7
 	vaddps %ymm14, %ymm6, %ymm14
@@ -94,13 +94,13 @@ avx_kernel_loop:
 	unroll 0
 	/* termination check */
 	subl $1, %ebp
-	jz pack_restart:
+	jz pack_restart
 
 	/* unroll 1 */
 	unroll 32
 	/* proceed pointers */
-	leaq 64(%rdi)
-	leaq 64(%rsi)
+	leaq 64(%rdi), %rdi
+	leaq 64(%rsi), %rsi
 
 pack:
 	/* pack needed? */
@@ -117,9 +117,9 @@ pack_do:
 	/* store a[k_cnt,m_cnt] */
 	movzbl %dh, %eax
 	movzbl %cl, %ebx
-	mull %eax %ebx
-	movzbl %ch %eax
-	addl %ebx %eax
+	mull %eax, %ebx
+	movzbl %ch, %eax
+	addl %ebx, %eax
 	movl %r12d, (%r10,%rax,4)
 	/* increment */
 	addb $1, %ch
@@ -138,13 +138,13 @@ pack_restart:
 	/* restart packing until completed */
 	addl $1, %ebp
 	cmp %dh, %dl
-	jne pack_do:
+	jne pack_do
 
 	/* loop end */
 
 	/* store c */
-	movq (%rsp,56), %rax
-	movq (%rsp,64), %rbx
+	movq 56(%rsp), %rax
+	movq 64(%rsp), %rbx
 	vmovaps %ymm8, (%rbx)
 	leaq (%rax,%rbx,4), %rax
 	vmovaps %ymm9, (%rax)
