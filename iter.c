@@ -2,7 +2,7 @@
 
 void init_iter_by_blk_spec(size_t len, int max_blk_len, int unit_len, iter_t *it) {
 	size_t unit_num = len / unit_len;
-	size_t unit_rem = len / unit_len;
+	size_t unit_rem = len % unit_len;
 	if (unit_rem == 0) {
 		*blk_lack_len = 0;
 	} else {
