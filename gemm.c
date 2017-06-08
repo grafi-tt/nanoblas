@@ -24,133 +24,70 @@ void gemm(char transa, char transb, size_t m, size_t n, size_t k,
 	/* get kernel */
 	kernel_t *kernel = decide_kernel();
 
-	/* get iterator */
-	char mnk_it_mem[sizeof(nest_iter_t)+sizeof(iter_t)*3];
-	nest_iter_t *mnk_it = (mnk_iter_t*) mnk_it_mem;
-	mnk_iter(m, n, k, BLK_K_LEN, BLK_MN_LEN, UNIT_LEN);
-	iter_t *m_it = &mnk_it->iters[0];
-	iter_t *n_it = &mnk_it->iters[1];
-	iter_t *k_it = &mnk_it->iters[2];
-
 	/* I believe this >1M memory never happen to be unaligned */
 	FTYPE *mem = (FTYPE*)malloc(sizeof(FTYPE)*4*BLK_K_LEN*BLK_MN_LEN);
 	FTYPE *restrict a_pack      = mem;
 	FTYPE *restrict a_next_pack = mem + BLK_K_LEN*BLK_MN_LEN;
 	FTYPE *restrict b_pack      = mem + 2*BLK_LEN*BLK_MN_LEN;
 	FTYPE *restrict b_next_pack = mem + 3*BLK_LEN*BLK_MN_LEN;
-
-	/* pack A */
+	/* pack A, B */
 	pack_block(imin(k, BLK_LEN), imin(m, BLK_LEN), interval_k_in_a, interval_m, a_pack, a);
+	pack_block(imin(k, BLK_LEN), imin(n, BLK_LEN), interval_k_in_n, interval_n, b_pack, b);
 
-	{
-		FTYPE *restrict c_pos = m_it->pos + ldc * n_it->pos;
-		int m_len = m_it->len;
-		int n_len = n_it->len;
-		int k_len = k_it->len;
-		nest_next(mnk_iter);
-		FTYPE *restrict a_next_pos = a + interval_m * m_it->pos + interval_k_in_a * k_it->pos;
-		FTYPE *restrict b_next_pos = b + interval_n * n_it->pos + interval_k_in_b * k_it->pos;
+	/* get iterator */
+	iter_t _m_it, _n_it, _k_it;
+	iter_by_blk_spec(m, blk_mn_len, UNIT_LEN, _m_it);
+	iter_by_blk_spec(n, blk_mn_len, UNIT_LEN, _n_it);
+	iter_by_blk_spec(k, blk_k_len, UNIT_LEN, _k_it);
+	nest_iter_t it3 = {
+		.depth = 2, .is_end = 0, .iters = { _m_it, _n_it, _k_it }
+	};
+	nest_iter_t it2 = {
+		.depth = 2, .is_end = 0, .iters = { _n_it, _k_it }
+	};
+	/* prepare scheduling */
+	sched_state_t a_sched_state, b_sched_state;
 
-		FTYPE a_pack_cur;
-		FTYPE b_pack_cur = b_pack;
+	do {
+		nest_next(&it3);
+		if (!it3.is_end) {
+			a_sched_state = {
+				.next_cur = a + interval_m*n_it3->pos  + interval_k_in_a*k_it3->pos;
+				.next_pack_cur = a_pack;
+				.k_next_len = k_it3->len;
+				.mn_next_len = m_it3->len;
+			};
+			start_sched(&a_sched_state);
+			sched_state_p = &a_sched_state;
+		}
+
+		if (m_it3->pos == 0) {
+			nest_next(&it2);
+			if (!it2.is_end) {
+				b_sched_state = {
+					.next_cur = b + interval_n*n_it2->pos  + interval_k_in_b*k_it2->pos;
+					.next_pack_cur = b_pack;
+					.k_next_len = k_it2->len;
+					.mn_next_len = n_it2->len;
+				};
+				start_sched(&b_sched_state);
+			}
+		}
+
 		for (int n_pos = 0; n_pos < n_len; n_pos += UNIT_LEN) {
-			a_pack_cur = a_pack;
+			int n_sub_len = imin(UNIT_LEN, n_len - n_pos);
 			for (int m_pos = 0; m_pos < m_len; m_pos += UNIT_LEN) {
-				kernel(a_pack_cur, b_pack_cur,
-						k_sched_len, m_sched_len, interval_k_in_a, interval_m,
-						a_next_pack_cur, a_next_cur, k_len, c_cur, ldc);
-				a_pack_cur += k_len * UNIT_LEN;
-				b_pack_cur += k_len * UNIT_LEN;
-			}
-		}
-	}
-
-	for (size_t k_cnt = 0; k_cnt < k_num; k_cnt++) {
-		FTYPE *restrict k_crd = k_cnt * k_len + imin(k_cnt, k_ext_num) * UNIT_LEN;
-		for (size_t n_cnt = 0; n_cnt < n_num; n_cnt++) {
-			FTYPE *restrict n_crd = n_cnt * n_len + imin(n_cnt, n_ext_num) * UNIT_LEN;
-			for (size_t m_cnt = 0; m_cnt < m_num; m_cnt++) {
-				FTYPE *restrict m_crd = m_cnt * m_len + imin(m_cnt, m_ext_num) * UNIT_LEN;
-				/* schedule packing of a, b */
-				if (m_cnt+1 < m_num) {
-					a_next_pos = a + k_crd*interval_k_in_a + (m_crd + m_len + ((m_cnt+1) < m_ext_num))*interval_
+				int m_sub_len = imin(UNIT_LEN, m_len - m_pos);
+				kernel(a_pack_cur, b_pack_cur, k_len, c_cur, ldc, sched_state_p);
+				step_sched(sched_state_p);
+				if (sched_state_p != &b_sched_state && sched_state_p->k_sched_len == 0) {
+					sched_state_p = &b_sched_state;
 				}
+				a_pack_cur += k_len * m_sub_len;
+				b_pack_cur += k_len * n_sub_len;
+				c_cur += m_sub_len;
 			}
+			c_cur += n_sub_len*ldc - m_len;
 		}
-	}
-
-	/* block loop k */
-	for (size_t k_pos = 0; k_pos < k; k_pos += BLK_LEN) {
-		const int k_len = imin(k - k_pos, BLK_LEN);
-		const FTYPE *a_pos = a + interval_k_in_a * k_pos;
-		const FTYPE *a_pos_bak = a_pos;
-		const FTYPE *b_pos = b + interval_k_in_b * k_pos;
-		/* block loop n */
-		for (size_t n_pos = 0; n_pos < n; n_pos += BLK_LEN) {
-			const int n_len = imin(BLK_LEN, n - n_pos);
-			/* pack B */
-			pack_block(k_len, n_len, interval_k_in_b, interval_n, b_pack, b_pos);
-			/* block loop m */
-			for (size_t m_pos = 0; m_pos < m; m_pos += BLK_LEN) {
-				const int m_len = imin(BLK_LEN, n - n_pos);
-				/* schedule packing of a */
-				FTYPE *a_next_pack_cur = a_next_pack;
-				const FTYPE *a_next_pos;
-				/*const*/ int k_next_len, m_next_len;
-				if (m_pos + BLK_LEN < m) {
-					a_next_pos = a_pos + interval_m*m_len;
-					k_next_len = k_len;
-					m_next_len = imin(BLK_LEN, m - (m_pos + BLK_LEN));
-				} else if (n_pos + BLK_LEN < n) {
-					a_next_pos = a_pos_bak;
-					k_next_len = k_len;
-					m_next_len = imin(BLK_LEN, m);
-				} else if (k_pos + BLK_LEN < k) {
-					a_next_pos = a_pos_bak + interval_k_in_a*k_len;
-					k_next_len = imin(BLK_LEN, k - (k_pos + BLK_LEN));
-					m_next_len = imin(BLK_LEN, m);
-				} else {
-					/* the last loop, so stop packing */
-					k_next_len = 0;
-					m_next_len = 0;
-				}
-				int m_sched_cnt = 0;
-				/* unit loop B */
-				for (size_t n_cur = n_pos; n_cur < n_pos + BLK_LEN; n_cur += UNIT_LEN) {
-					const int n_sub_len = imax(imin(UNIT_LEN, n - n_cur), 0);
-					/* get schedule */
-					int m_sched_len = imin(UNIT_LEN, m_next_len - m_sched_cnt);
-					int k_sched_cnt = 0;
-					const FTYPE *a_next_cur = a_next_pos + interval_m*m_sched_cnt;
-					/* unit loop A */
-					for (size_t m_cur = m_pos; m_cur < m_pos + BLK_LEN; m_cur += UNIT_LEN) {
-						const int m_sub_len = imax(imin(UNIT_LEN, m - m_cur), 0);
-						FTYPE *a_pack_cur = a_pack;
-						FTYPE *b_pack_cur = b_pack;
-						/* get schedule */
-						int k_sched_len = imin(UNIT_LEN, k_next_len - k_sched_cnt);
-						/* run kernel */
-						if (n_sub_len == UNIT_LEN && m_sub_len == UNIT_LEN) {
-							kernel(a_pack_cur, b_pack_cur,
-									k_sched_len, m_sched_len, interval_k_in_a, interval_m,
-									a_next_pack_cur, a_next_cur, k_len, c, ldc);
-						} else {
-							boundary_kernel(m_len, n_len, a_pack_cur, b_pack_cur,
-									k_sched_len, m_sched_len, interval_k_in_a, interval_m,
-									a_next_pack_cur, a_next_cur, k_len, c, ldc);
-						}
-						a_pack_cur += k_len * m_len;
-						b_pack_cur += k_len * n_len;
-						k_sched_cnt += k_sched_len;
-						a_next_pack_cur += k_sched_len * m_sched_len;
-						a_next_cur += interval_k_in_a*k_sched_len;
-					}
-					m_sched_cnt += m_sched_len;
-				}
-				a_pos += m_len;
-				fswap(&a_pack, &a_next_pack);
-			}
-			b_pos += n_len;
-		}
-	}
+	} while (!it3.is_end);
 }
