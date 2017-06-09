@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include "gemm.h"
-#include "boundary.h"
 #include "iter.h"
 #include "kernel.h"
+#include "pack.h"
 #include "util.h"
 
 static void decide_blk_len(int max_blk_len, size_t len,
@@ -79,10 +79,19 @@ void gemm(char transa, char transb, size_t m, size_t n, size_t k,
 			for (int m_pos = 0; m_pos < m_len; m_pos += UNIT_LEN) {
 				int m_sub_len = imin(UNIT_LEN, m_len - m_pos);
 				kernel(a_pack_cur, b_pack_cur, k_len, c_cur, ldc, sched_state_p);
-				step_sched(sched_state_p);
-				if (sched_state_p != &b_sched_state && sched_state_p->k_sched_len == 0) {
-					sched_state_p = &b_sched_state;
+				if (sched_state_p) {
+					step_sched(sched_state_p);
+					if (sched_state_p->k_sched_len == 0) {
+						if (sched_state == &a_sched_state) {
+							if (b_sched_state.k_sched_len != 0) {
+								sched_state = &b_sched_state;
+								goto sched_end;
+							}
+						}
+						sched_state_p = NULL;
+					}
 				}
+				sched_end:
 				a_pack_cur += k_len * m_sub_len;
 				b_pack_cur += k_len * n_sub_len;
 				c_cur += m_sub_len;

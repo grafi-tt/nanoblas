@@ -8,17 +8,17 @@ typedef double f64;
 
 #ifdef USE_F32
 #define FTYPE f32
-#define BLK_MN_LEN 128
-#define BLK_K_LEN 128
+#define BLK_MN_LEN 64
+#define BLK_K_LEN 64
 #define UNIT_LEN 8
 #define PREFIX s
 #endif
 
 #ifdef USE_F64
 #define FTYPE f64
-#define BLK_MN_LEN 64
-#define BLK_K_LEN 128
-#define UNIT_LEN 8
+#define BLK_MN_LEN 32
+#define BLK_K_LEN 64
+#define UNIT_LEN 4
 #define PREFIX d
 #endif
 
