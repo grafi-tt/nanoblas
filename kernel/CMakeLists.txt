@@ -3,7 +3,7 @@ if(is_x86_64)
 else()
 	add_subdirectory(other)
 endif()
-set(SRCS "${SRCS}"
-	"${CMAKE_CURRENT_SOURCE_DIR}/generic_kernel.c"
+set(SRCS ${SRCS}
+	${CMAKE_CURRENT_SOURCE_DIR}/generic_kernel.c
 	PARENT_SCOPE
 )
