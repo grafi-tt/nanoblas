@@ -7,7 +7,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/detect_arch.cmake)
 
 add_subdirectory(kernel)
 set(SRCS ${SRCS}
-	${CMAKE_SOURCE_DIR}/pack.c
+	${CMAKE_SOURCE_DIR}/sched.c
 	${CMAKE_SOURCE_DIR}/gemm.c
 )
 set(TYPE_INDEPENDENT_SRCS ${TYPE_INDEPENDENT_SRCS}

@@ -6,9 +6,9 @@
 typedef struct {
 	size_t pos;
 	int len;
-	const int unit_len;
-	const size_t sum;
-	const size_t dec_pos;
+	int unit_len;
+	size_t sum;
+	size_t dec_pos;
 } iter_t;
 
 typedef struct {

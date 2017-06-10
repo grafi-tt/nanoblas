@@ -8,8 +8,8 @@
 typedef struct {
 	FTYPE *next_cur;
 	FTYPE *next_pack_cur;
-	const int k_next_len;
-	const int mn_next_len;
+	int k_next_len;
+	int mn_next_len;
 	const ptrdiff_t interval_k;
 	const ptrdiff_t interval_mn;
 	int k_sched_len;
@@ -26,6 +26,6 @@ void start_sched(sched_state_t *st);
 void step_sched(sched_state_t *st);
 
 #define all_steps_sched APPEND_FTYPE(all_steps_sched)
-void all_steps_sched(sched_state_t *st) {
+void all_steps_sched(sched_state_t *st);
 
 #endif

@@ -21,13 +21,13 @@ void generic_kernel(
 	c_buf_cur = c_buf;
 	c_cur = c;
 
-	if (st == NULL) goto nopack_loop:
+	if (st == NULL) goto nopack_loop;
 
-	FTYPE *restrict a_next_cur = st->a_pack;
-	FTYPE *restrict a_next_pack_cur = st->a_next_pack;
+	FTYPE *restrict a_next_cur = st->next_cur;
+	FTYPE *restrict a_next_pack_cur = st->next_pack_cur;
 	int k_sched_len = st->k_sched_len;
 	int mn_sched_len = st->mn_sched_len;
-	ptrdiff_t interval_m = st->interval_m;
+	ptrdiff_t interval_m = st->interval_mn;
 	ptrdiff_t proceed_k = st->interval_k - UNIT_LEN*interval_m;
 
 	int mn_cnt = 0;
@@ -55,7 +55,7 @@ void generic_kernel(
 		a_next_cur += proceed_k & moving_up;
 		k_sched_len += moving_up;
 	} while (k_sched_len);
-	if (k_len == 0) goto loop_end
+	if (k_len == 0) goto loop_end;
 
 	nopack_loop:
 	do {
@@ -69,7 +69,7 @@ void generic_kernel(
 		c_buf_cur = c_buf;
 		a_pack += UNIT_LEN;
 		b_pack += UNIT_LEN;
-	} while (k_len != 0)
+	} while (k_len != 0);
 	loop_end:
 
 	/* store c */

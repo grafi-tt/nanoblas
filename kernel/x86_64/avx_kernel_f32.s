@@ -27,78 +27,79 @@ avx_kernel_f32:
 	pushq %r9
 	/* create mask template */
 	mov $0x10000000, %eax
-	sll $23, %ecx
+	shl $23, %ecx
 	add %ecx, %eax
-	pushl %eax
-	vbroadcastps (%rsp), %xmm0
+	pushq %rax
+	vbroadcastss (%rsp), %xmm0
 	movaps %xmm0, %xmm1
 	/* shift template */
-	leal 2(%r8,%r8,4), %rax
-	jmp short, %rax
+	leal 2(%r8d,%r8d,4), %eax
+	jmp *eax
 	/* 40 bytes until here */
 	/* loop */
-	psrldq $4, %xmm0
-	psrldq $4, %xmm0
-	psrldq $4, %xmm0
-	psrldq $4, %xmm0
 	psrldq $4, %xmm1
 	psrldq $4, %xmm1
 	psrldq $4, %xmm1
 	psrldq $4, %xmm1
+	psrldq $4, %xmm0
+	psrldq $4, %xmm0
+	psrldq $4, %xmm0
+	psrldq $4, %xmm0
 	/* 80 bytes until here */
 	/* cocnat template */
-	vinsertf128 $0, $ymm1, $ymm0, $ymm0
+	vinsertf128 $1, %xmm1, %ymm0, %ymm0
 	/* backup template */
-	movaps %ymm0, %ymm5
+	vmovaps %ymm0, %ymm5
 
 	/* mask updater for n-dim */
 	/* IEEE754 trick */
 	mov $1, %eax
-	sra $23, %eax
+	shl $23, %eax
 	movl %eax, (%rsp)
-	vbroadcastps (%rsp), %ymm1
+	vbroadcastss (%rsp), %ymm1
 
 	/* ldc */
-	movq 36(%rsp), %r10
+	movq 40(%rsp), %r10
 	/* load c  */
-	vmaskmovps %ymm0, (%rax), %ymm8
+	vmaskmovps (%rax), %ymm0, %ymm8
 	vaddps %ymm1, %ymm0, %ymm0
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm0, (%r9), %ymm9
+	vmaskmovps (%r9), %ymm0, %ymm9
 	vaddps %ymm1, %ymm0, %ymm0
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm0, (%r9), %ymm10
+	vmaskmovps (%r9), %ymm0, %ymm10
 	vaddps %ymm1, %ymm0, %ymm0
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm0, (%r9), %ymm11
+	vmaskmovps (%r9), %ymm0, %ymm11
 	vaddps %ymm1, %ymm0, %ymm0
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm0, (%r9), %ymm12
+	vmaskmovps (%r9), %ymm0, %ymm12
 	vaddps %ymm1, %ymm0, %ymm0
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm0, (%r9), %ymm13
+	vmaskmovps (%r9), %ymm0, %ymm13
 	vaddps %ymm1, %ymm0, %ymm0
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm0, (%r9), %ymm14
-	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm0, (%r9), %ymm15
+	vmaskmovps (%r9), %ymm0, %ymm14
 	vaddps %ymm1, %ymm0, %ymm0
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
+	vmaskmovps (%r9), %ymm0, %ymm15
 
 	/* load sched state */
-	mov 44(%rsp),%r8
+	mov 48(%rsp),%r8
 	test %r8, %r8
 	jz avx_kernel_nopack_loop
 	/* adjust and escape k_len */
 	mov 40(%r8), %ebp
-	leal (%edx,%ebp,-8), %r12d
+	leal (,%ebp,8), %eax
+	subl %eax, %edx
+	movl %edx, %r12d
 	/* load vals */
 	mov 44(%r8), %edx
 	mov 32(%r8), %r11
@@ -106,7 +107,8 @@ avx_kernel_f32:
 	mov 8(%r8), %r9
 	mov (%r8), %r8
 	/* calculate proceed_k */
-	leaq (%r10,%r11,-8), %r10
+	leaq (,%r11,8), %rax
+	subq %rax, %r10
 
 .align 4
 avx_kernel_pack_loop:
@@ -163,7 +165,7 @@ avx_kernel_pack_loop:
 	sete %al
 	addq $-1, %rax
 	andl %eax, %ecx
-	notq %rax, %rax
+	notq %rax
 	movq %r10, %rbx
 	andq %rax, %rbx
 	leaq (%r8,%rbx,4), %r8
@@ -216,42 +218,41 @@ avx_kernel_nopack_loop:
 avx_kernel_loop_end:
 
 	/* load template */
-	vbroadcastps (%rsp), %ymm1
-	addq $4, %rsp
+	vbroadcastss (%rsp), %ymm1
+	addq $8, %rsp
 	/* c, ldc */
 	popq %r9
 	movq 24(%rsp), %r10
 	/* store c */
-	vmaskmovps %ymm5, (%r9), %ymm8
+	vmaskmovps %ymm8, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm5, (%r9), %ymm9
+	vmaskmovps %ymm9, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm5, (%r9), %ymm10
+	vmaskmovps %ymm10, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm5, (%r9), %ymm11
+	vmaskmovps %ymm11, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm5, (%r9), %ymm12
+	vmaskmovps %ymm12, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm5, (%r9), %ymm13
+	vmaskmovps %ymm13, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm5, (%r9), %ymm14
-	leaq (%r9,%r10,4), %r9
-	vmaskmovps %ymm5, (%r9), %ymm15
+	vmaskmovps %ymm14, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
 	vaddps %ymm1, %ymm1, %ymm1
 	leaq (%r9,%r10,4), %r9
+	vmaskmovps %ymm15, %ymm5, (%r9)
 
 	/* return */
 	popq %r12
