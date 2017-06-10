@@ -31,6 +31,6 @@ add_library(nanoblas
 set(TARGETS nanoblas_f32 nanoblas_f64 nanoblas)
 
 set_target_properties(${TARGETS} PROPERTIES C_STANDARD 99)
-if(CMAKE_C_COMPILER MATCHES "(gcc|clang)[^/\\]*$")
+if(CMAKE_C_COMPILER MATCHES "gcc|clang")
 	target_compile_options(${TARGETS} PUBLIC "-O2 -Werror -Wall -Wextra -Wpedantic")
 endif()
