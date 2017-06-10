@@ -10,6 +10,8 @@ void gemm(
 		FTYPE alpha, FTYPE *restrict a, ptrdiff_t lda,
 		FTYPE *restrict b, ptrdiff_t ldb,
 		FTYPE beta, FTYPE *restrict c, ptrdiff_t ldc) {
+	(void) alpha;
+	(void) beta;
 
 	/* get interval */
 	const int trans_a = transa == 'T';
@@ -56,8 +58,8 @@ void gemm(
 
 	/* first packing */
 	sched_state_t *sched_state_p = NULL;
-	FTYPE *restrict a_pack_cur;
-	FTYPE *restrict b_pack_cur;
+	FTYPE *restrict a_pack_cur = a_pack;
+	FTYPE *restrict b_pack_cur = b_pack;
 	sched_state_t a_sched_state = {
 		.next_cur = a,
 		.next_pack_cur = a_next_pack,

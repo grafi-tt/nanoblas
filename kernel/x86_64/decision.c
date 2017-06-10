@@ -8,7 +8,7 @@ kernel_t *decide_kernel() {
 	static kernel_t *kernel;
 	if (kernel) return kernel;
 	/* use temporal variable for thread safety */
-	void *kernel_cand = &generic_kernel;
+	kernel_t *kernel_cand = &generic_kernel;
 
 	/* check whether feature set availble */
 	int eax, ebx, ecx, edx;

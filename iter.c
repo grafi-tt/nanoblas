@@ -27,7 +27,7 @@ void init_iter_by_blk_spec(size_t sum, int max_len, int unit_len, iter_t *it) {
 	}
 
 	it->len = ++len;
-	it->dec_pos = len*unit_rem;
+	it->dec_pos = len*unit_rem_blk;
 }
 
 void next(iter_t *it) {
@@ -41,7 +41,7 @@ void next(iter_t *it) {
 	if (it->pos == it->dec_pos)
 		it->len -= it->unit_len;
 	size_t d = it->sum - it->pos;
-	if (d != 0 && d < it->len)
+	if (d != 0 && d < (size_t)it->len)
 		it->len = d;
 }
 
@@ -52,7 +52,7 @@ void nest_next(nest_iter_t *nit) {
 		if (it->pos < it->sum) return;
 		it->pos = 0;
 		it->len += it->unit_len;
-		if (it->sum < it->len)
+		if (it->sum < (size_t)it->len)
 			it->len = it->sum;
 	}
 	nit->is_end = 1;

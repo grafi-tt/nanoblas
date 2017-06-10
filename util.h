@@ -4,10 +4,10 @@
 #include "const.h"
 
 static inline int imin(int a, int b) {
-	a < b ? a : b;
+	return a < b ? a : b;
 }
 static inline int imax(int a, int b) {
-	a > b ? a : b;
+	return a > b ? a : b;
 }
 #define fswap APPEND_FTYPE(fswap)
 static inline void fswap(FTYPE *restrict *restrict p, FTYPE *restrict *restrict q) {
