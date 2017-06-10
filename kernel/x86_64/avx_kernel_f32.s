@@ -24,7 +24,6 @@ avx_kernel_f32:
 	pushq %rbp
 	pushq %rbx
 	pushq %r12
-	pushq %r9
 	/* create mask template */
 	mov $0x10000000, %eax
 	shl $23, %ecx
@@ -33,10 +32,13 @@ avx_kernel_f32:
 	vbroadcastss (%rsp), %xmm0
 	movaps %xmm0, %xmm1
 	/* shift template */
-	leal 2(%r8d,%r8d,4), %eax
-	jmp *eax
+	leaq shifter(%rip), %rax
+	leaq (%r8,%r8,4), %r8
+	addq %r8, %rax
+	jmpq *%rax
 	/* 40 bytes until here */
 	/* loop */
+shifter:
 	psrldq $4, %xmm1
 	psrldq $4, %xmm1
 	psrldq $4, %xmm1
@@ -53,11 +55,12 @@ avx_kernel_f32:
 
 	/* mask updater for n-dim */
 	/* IEEE754 trick */
-	mov $1, %eax
-	shl $23, %eax
-	movl %eax, (%rsp)
+	mov $0x00800000, %eax /* 2^23 */
+	movq %rax, (%rsp)
 	vbroadcastss (%rsp), %ymm1
 
+	/* escape c */
+	pushq %r9
 	/* ldc */
 	movq 40(%rsp), %r10
 	/* load c  */
@@ -217,12 +220,12 @@ avx_kernel_nopack_loop:
 	jnz avx_kernel_nopack_loop
 avx_kernel_loop_end:
 
+	/* ldc, c */
+	movq 40(%rsp), %r10
+	popq %r9
 	/* load template */
 	vbroadcastss (%rsp), %ymm1
 	addq $8, %rsp
-	/* c, ldc */
-	popq %r9
-	movq 24(%rsp), %r10
 	/* store c */
 	vmaskmovps %ymm8, %ymm5, (%r9)
 	vaddps %ymm1, %ymm5, %ymm5
