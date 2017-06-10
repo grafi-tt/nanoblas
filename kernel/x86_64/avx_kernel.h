@@ -5,9 +5,8 @@
 
 #define avx_kernel APPEND_FTYPE(avx_kernel)
 void avx_kernel(
-	const FTYPE *restrict a_pack, const FTYPE *restrict b_pack,
-	int k_sched_len, int m_sched_len, size_t interval_k_in_a, size_t interval_m,
-	FTYPE *restrict a_next_pack, const FTYPE *restrict a_next,
-	size_t k_len_szt, FTYPE* restrict c, size_t ldc);
+		const FTYPE *restrict a_pack, const FTYPE *restrict b_pack,
+		int k_len, int m_sub_len, int n_sub_len,
+		FTYPE* restrict c, ptrdiff_t ldc, const sched_state_t *st);
 
 #endif
