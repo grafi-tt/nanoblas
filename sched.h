@@ -4,10 +4,6 @@
 #include <stddef.h>
 #include "const.h"
 
-#define pack_block APPEND_FTYPE(pack_block)
-void pack_block(int k_len, int m_or_n_len, ptrdiff_t interval_k, ptrdiff_t interval_m_or_n,
-		FTYPE *restrict pack, const FTYPE *restrict a_or_b);
-
 #define pack_state_t APPEND_FTYPE(pack_state_t)
 typedef struct {
 	FTYPE *next_cur;

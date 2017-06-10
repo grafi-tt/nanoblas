@@ -28,7 +28,7 @@ void step_sched(sched_state_t *st) {
 
 void all_steps_sched(sched_state_t *st) {
 	if (st->k_sched_len == 0) return;
-	unsigned int mn_cnt = 0;
+	int mn_cnt = 0;
 	const ptrdiff_t proceed_k = st->interval_k - st->unit_len*st->interval_mn;
 	while (st->mn_packed_len < st->mn_next_len) {
 		while (st->k_packed_len < st->k_next_len) {
