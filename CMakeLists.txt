@@ -28,9 +28,9 @@ add_library(nanoblas
 	${TYPE_INDEPENDENT_SRCS}
 )
 
-set(TARGETS nanoblas_f32 nanoblas_f64 nanoblas)
-
-set_target_properties(${TARGETS} PROPERTIES C_STANDARD 99)
-if(CMAKE_C_COMPILER MATCHES "gcc|clang")
-	target_compile_options(${TARGETS} PUBLIC "-O2 -Werror -Wall -Wextra -Wpedantic")
+set_target_properties(nanoblas_f32 nanoblas_f64 nanoblas PROPERTIES C_STANDARD 99)
+if(${CMAKE_C_COMPILER_ID} MATCHES "GNU|Clang")
+	target_compile_options(nanoblas_f32 PUBLIC $<$<COMPILE_LANGUAGE:C>:-O2 -Werror -Wall -Wextra -Wpedantic>)
+	target_compile_options(nanoblas_f64 PUBLIC $<$<COMPILE_LANGUAGE:C>:-O2 -Werror -Wall -Wextra -Wpedantic>)
+	target_compile_options(nanoblas     PUBLIC $<$<COMPILE_LANGUAGE:C>:-O2 -Werror -Wall -Wextra -Wpedantic>)
 endif()
