@@ -5,7 +5,7 @@ void start_sched(sched_state_t *st) {
 	st->k_packed_len = 0;
 	st->mn_packed_len = 0;
 	st->k_sched_len = imin(st->k_next_len, 2*st->unit_len);
-	st->mn_sched_len = imin(st->mn_packed_len, st->unit_len);
+	st->mn_sched_len = imin(st->mn_next_len, st->unit_len);
 }
 
 void step_sched(sched_state_t *st) {
