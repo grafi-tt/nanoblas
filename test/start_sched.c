@@ -7,8 +7,8 @@
 
 void normal() {
 	sched_state_t sched = {
-		.k_next_len = 128,
-		.mn_next_len = 128,
+		.k_next_len = 64,
+		.mn_next_len = 64,
 		.unit_len = 8
 	};
 	start_sched(&sched);

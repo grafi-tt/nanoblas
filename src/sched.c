@@ -9,12 +9,11 @@ void start_sched(sched_state_t *st) {
 }
 
 void step_sched(sched_state_t *st) {
+	st->next_cur += st->k_sched_len*st->interval_k;
 	st->next_pack_cur += st->k_sched_len * st->mn_sched_len;
 	st->k_packed_len += st->k_sched_len;
-	if (st->k_packed_len != st->k_next_len) {
-		st->next_cur += st->k_sched_len*st->interval_k;
-	} else {
-		st->next_cur += -st->mn_sched_len*st->interval_mn + st->k_packed_len*st->interval_k;
+	if (st->k_packed_len == st->k_next_len) {
+		st->next_cur += -st->k_packed_len*st->interval_k + st->mn_sched_len*st->interval_mn;
 		st->k_packed_len = 0;
 		st->mn_packed_len += st->mn_sched_len;
 		st->mn_sched_len = imin(st->unit_len, st->mn_next_len - st->mn_packed_len);
