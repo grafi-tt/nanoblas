@@ -21,7 +21,9 @@ void gemm(
 	const ptrdiff_t interval_m = trans_a ? 1 : lda;
 	const ptrdiff_t interval_n = trans_b ? ldb : 1;
 	/* get kernel */
-	kernel_t *kernel = decide_kernel();
+	kernel_t kernel = decide_kernel();
+	int unit_len = kernel.unit_len;
+	kernel_fun_t *kernel_fun = kernel.fun;
 
 	FTYPE mem[4*BLK_K_LEN*BLK_MN_LEN+32/sizeof(FTYPE)];
 	FTYPE *restrict mem_ptr = mem;
@@ -35,9 +37,9 @@ void gemm(
 
 	/* get iterator */
 	iter_t _m_it, _n_it, _k_it;
-	iter_by_blk_spec(m, BLK_MN_LEN, UNIT_LEN, &_m_it);
-	iter_by_blk_spec(n, BLK_MN_LEN, UNIT_LEN, &_n_it);
-	iter_by_blk_spec(k, BLK_K_LEN, UNIT_LEN, &_k_it);
+	iter_by_blk_spec(m, BLK_MN_LEN, unit_len, &_m_it);
+	iter_by_blk_spec(n, BLK_MN_LEN, unit_len, &_n_it);
+	iter_by_blk_spec(k, BLK_K_LEN, unit_len, &_k_it);
 	union {
 		char mem[sizeof(nest_iter_t) + sizeof(iter_t)*3];
 		nest_iter_t nit;
@@ -67,7 +69,7 @@ void gemm(
 		.mn_next_len = m_it3->len,
 		.interval_k = interval_k_in_a,
 		.interval_mn = interval_m,
-		.unit_len = UNIT_LEN
+		.unit_len = unit_len
 	};
 	sched_state_t b_sched_state = {
 		.next_cur = b,
@@ -76,7 +78,7 @@ void gemm(
 		.mn_next_len = n_it2->len,
 		.interval_k = interval_k_in_b,
 		.interval_mn = interval_n,
-		.unit_len = UNIT_LEN
+		.unit_len = unit_len
 	};
 	start_sched(&a_sched_state);
 	pack_all(&a_sched_state);
@@ -116,11 +118,11 @@ void gemm(
 			}
 		}
 
-		for (size_t n_cur = n_pos; n_cur < n_end; n_cur += UNIT_LEN) {
-			int n_sub_len = imin(UNIT_LEN, n_end - n_cur);
-			for (size_t m_cur = m_pos; m_cur < m_end; m_cur += UNIT_LEN) {
-				int m_sub_len = imin(UNIT_LEN, m_end - m_cur);
-				kernel(a_pack_cur, b_pack_cur, k_len, m_sub_len, n_sub_len,
+		for (size_t n_cur = n_pos; n_cur < n_end; n_cur += unit_len) {
+			int n_sub_len = imin(unit_len, n_end - n_cur);
+			for (size_t m_cur = m_pos; m_cur < m_end; m_cur += unit_len) {
+				int m_sub_len = imin(unit_len, m_end - m_cur);
+				kernel_fun(a_pack_cur, b_pack_cur, k_len, m_sub_len, n_sub_len,
 						c + ldc*n_cur + m_cur, ldc, sched_state_p);
 				if (sched_state_p) {
 					step_sched(sched_state_p);

@@ -10,7 +10,6 @@ typedef double f64;
 #define FTYPE f32
 #define BLK_MN_LEN 80
 #define BLK_K_LEN 64
-#define UNIT_LEN 8
 #define PREFIX s
 #endif
 
@@ -18,7 +17,6 @@ typedef double f64;
 #define FTYPE f64
 #define BLK_MN_LEN 40
 #define BLK_K_LEN 64
-#define UNIT_LEN 4
 #define PREFIX d
 #endif
 

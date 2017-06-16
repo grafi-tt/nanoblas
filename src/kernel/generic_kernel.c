@@ -1,7 +1,7 @@
 #include "generic_kernel.h"
 
 __attribute__((optimize("unroll-loops")))
-void generic_kernel(
+void generic_kernel_fun(
 		const FTYPE *restrict a_pack, const FTYPE *restrict b_pack,
 		int k_len, int m_sub_len, int n_sub_len,
 		FTYPE* restrict c, ptrdiff_t ldc, const sched_state_t *st) {
@@ -81,3 +81,5 @@ void generic_kernel(
 		c_cur += ldc;
 	}
 }
+
+kernel_t generic_kernel = { &generic_kernel_fun, UNIT_LEN };

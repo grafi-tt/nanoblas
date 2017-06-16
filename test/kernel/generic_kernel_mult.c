@@ -2,6 +2,8 @@
 #undef NDEBUG
 #endif
 
+#define UNIT_LEN 8
+
 #include <assert.h>
 #include <stdio.h>
 #include "kernel/generic_kernel.h"
@@ -56,7 +58,7 @@ int main() {
 	start_sched(&b_sched);
 	pack_all(&b_sched);
 	/* run kernel */
-	generic_kernel(a_pack, b_pack, 64, 8, 8, c, 8, NULL);
+	generic_kernel.fun(a_pack, b_pack, 64, 8, 8, c, 8, NULL);
 	/* create ans */
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
@@ -66,7 +68,7 @@ int main() {
 		}
 	}
 	for (int i = 0; i < 8*8; i++) {
-		printf("c[%d]=%f, c_ans[%d]=%f\n", i, c[i], i, c_ans[i]);
+		/* printf("c[%d]=%f, c_ans[%d]=%f\n", i, c[i], i, c_ans[i]); */
 		assert(c[i] == c_ans[i]);
 	}
 }
