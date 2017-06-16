@@ -7,15 +7,17 @@
 #include "sched/fixture.h"
 
 void test_s1() {
-	start_sched(&s1);
-	assert(s1.k_sched_len == 16);
-	assert(s1.mn_sched_len == 8);
+	sched_state_t sched = s1;
+	start_sched(&sched);
+	assert(sched.k_sched_len == 16);
+	assert(sched.mn_sched_len == 8);
 }
 
 void test_s3() {
-	start_sched(&s3);
-	assert(s3.k_sched_len == 15);
-	assert(s3.mn_sched_len == 3);
+	sched_state_t sched = s3;
+	start_sched(&sched);
+	assert(sched.k_sched_len == 15);
+	assert(sched.mn_sched_len == 3);
 }
 
 int main() {

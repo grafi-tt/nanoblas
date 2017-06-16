@@ -25,7 +25,7 @@ void start_sched(sched_state_t *st);
 #define step_sched APPEND_FTYPE(step_sched)
 void step_sched(sched_state_t *st);
 
-#define all_steps_sched APPEND_FTYPE(all_steps_sched)
+#define pack_all APPEND_FTYPE(pack_all)
 void pack_all(sched_state_t *st);
 
 #endif
