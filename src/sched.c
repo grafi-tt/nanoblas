@@ -22,7 +22,7 @@ void step_sched(sched_state_t *st) {
 	st->k_sched_len = imin(2*st->unit_len, st->k_next_len - st->k_packed_len);
 }
 
-void all_steps_sched(sched_state_t *st) {
+void pack_all(sched_state_t *st) {
 	int mn_cnt = 0;
 	const ptrdiff_t proceed_k = st->interval_k - st->unit_len*st->interval_mn;
 	while (st->mn_packed_len < st->mn_next_len) {

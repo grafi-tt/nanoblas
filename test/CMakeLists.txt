@@ -1,6 +1,1 @@
-#add_subdirectory(kernel)
-set(TESTS ${TESTS}
-	${CMAKE_CURRENT_SOURCE_DIR}/start_sched.c
-	${CMAKE_CURRENT_SOURCE_DIR}/step_sched.c
-	PARENT_SCOPE
-)
+add_subdirectory(sched)

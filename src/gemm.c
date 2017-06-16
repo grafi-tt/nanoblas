@@ -79,9 +79,9 @@ void gemm(
 		.unit_len = UNIT_LEN
 	};
 	start_sched(&a_sched_state);
-	all_steps_sched(&a_sched_state);
+	pack_all(&a_sched_state);
 	start_sched(&b_sched_state);
-	all_steps_sched(&b_sched_state);
+	pack_all(&b_sched_state);
 
 	do {
 		const int m_len = m_it3->len;
