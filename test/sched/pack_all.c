@@ -3,7 +3,6 @@
 #endif
 
 #include <assert.h>
-#include <stdio.h>
 #include "sched.h"
 #include "sched/fixture.h"
 

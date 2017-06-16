@@ -15,7 +15,7 @@ void generic_kernel(
 		for (int j = 0; j < n_sub_len; j++) {
 			c_buf_cur[j] = c_cur[j];
 		}
-		c_buf_cur += n_sub_len;
+		c_buf_cur += UNIT_LEN;
 		c_cur += ldc;
 	}
 	c_buf_cur = c_buf;
@@ -28,7 +28,7 @@ void generic_kernel(
 	int k_sched_len = st->k_sched_len;
 	int mn_sched_len = st->mn_sched_len;
 	ptrdiff_t interval_m = st->interval_mn;
-	ptrdiff_t proceed_k = st->interval_k - UNIT_LEN*interval_m;
+	ptrdiff_t proceed_k = -UNIT_LEN*interval_m + st->interval_k;
 
 	int mn_cnt = 0;
 	k_len -= UNIT_LEN*k_sched_len;
@@ -62,14 +62,14 @@ void generic_kernel(
 		for (int i = 0; i < UNIT_LEN; i++) {
 			FTYPE v = a_pack[i];
 			for (int j = 0; j < UNIT_LEN; j++) {
-				c_buf_cur[j] = v * b_pack[j];
+				c_buf_cur[j] += v * b_pack[j];
 			}
 			c_buf_cur += UNIT_LEN;
 		}
 		c_buf_cur = c_buf;
 		a_pack += UNIT_LEN;
 		b_pack += UNIT_LEN;
-	} while (k_len != 0);
+	} while (--k_len);
 	loop_end:
 
 	/* store c */
