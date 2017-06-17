@@ -4,8 +4,8 @@
 #include "kernel/x86_64/avx_kernel.h"
 #include "kernel/x86_64/cpuid.h"
 
-kernel_t_f32 decide_kernel() {
-	kernel_t_f32 kernel_cand = generic_kernel_8_f32;
+f32_kernel_t decide_kernel() {
+	f32_kernel_t kernel_cand = f32_generic_kernel_8;
 
 	/* check whether feature set availble */
 	int eax, ebx, ecx, edx;
@@ -20,7 +20,7 @@ kernel_t_f32 decide_kernel() {
 	/* kernel_cand = &sse2_kernel; */
 	/* check avx */
 	if (!(ecx && (1<<28))) goto decided;
-	kernel_cand = avx_kernel_f32;
+	kernel_cand = f32_avx_kernel;
 	/* check fma */
 	if (!(ecx && (1<<12))) goto decided;
 	/* kernel_cand = &fma_kernel; */

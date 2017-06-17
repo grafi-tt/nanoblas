@@ -26,15 +26,15 @@ typedef double f64;
 
 #endif
 
-#define APPEND_FTYPE(name) APPEND_FTYPE_HELPER1(name, FTYPE)
-#define APPEND_FTYPE_HELPER1(name, typ) APPEND_FTYPE_HELPER2(name, typ)
-#define APPEND_FTYPE_HELPER2(name, typ) name##_##typ
+#define ADD_FTYPE(name) ADD_FTYPE_HELPER1(name, FTYPE)
+#define ADD_FTYPE_HELPER1(name, typ) ADD_FTYPE_HELPER2(name, typ)
+#define ADD_FTYPE_HELPER2(name, typ) typ##_##name
 
 #define ADD_PREFIX(name) ADD_PREFIX_HELPER1(name, PREFIX)
 #define ADD_PREFIX_HELPER1(name, typ) ADD_PREFIX_HELPER2(name, typ)
 #define ADD_PREFIX_HELPER2(name, typ) typ##name
 
-#define kernel_t APPEND_FTYPE(kernel_t)
-#define kernel_fun_t APPEND_FTYPE(kernel_fun_t)
-#define sched_state_t APPEND_FTYPE(sched_state_t)
-#define decide_kernel APPEND_FTYPE(decide_kernel)
+#define kernel_t ADD_FTYPE(kernel_t)
+#define kernel_fun_t ADD_FTYPE(kernel_fun_t)
+#define sched_state_t ADD_FTYPE(sched_state_t)
+#define decide_kernel ADD_FTYPE(decide_kernel)

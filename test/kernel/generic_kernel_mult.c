@@ -6,10 +6,11 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include "internal/sched.h"
 #include "kernel/generic_kernel.h"
+#include "internal/macro.h"
+#include "internal/sched.h"
 
-#define generic_kernel_8 APPEND_FTYPE(generic_kernel_8)
+#define generic_kernel_8 ADD_FTYPE(generic_kernel_8)
 
 static FTYPE a[8*64];
 static FTYPE b[8*64];

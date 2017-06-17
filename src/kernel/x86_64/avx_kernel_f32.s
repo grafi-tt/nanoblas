@@ -18,8 +18,8 @@
 .section .text
 
 .align 4
-.globl avx_kernel_f32
-avx_kernel_f32:
+.globl f32_avx_kernel
+f32_avx_kernel:
 	/* escape */
 	pushq %rbp
 	pushq %rbx

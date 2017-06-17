@@ -3,10 +3,10 @@
 
 #include "kernel.h"
 
-kernel_fun_t_f32 avx_kernel_fun_f32;
-/* kernel_fun_t_f64 avx_kernel_fun_f64; */
+f32_kernel_fun_t f32_avx_kernel_fun;
+/* f64_kernel_fun_t f64_avx_kernel_fun; */
 
-kernel_t_f32 avx_kernel_f32;
-/* kernel_t_f64 avx_kernel_f64; */
+f32_kernel_t f32_avx_kernel;
+/* f64_kernel_t f64_avx_kernel; */
 
 #endif

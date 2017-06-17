@@ -3,14 +3,14 @@
 
 #include "kernel.h"
 
-kernel_fun_t_f32 generic_kernel_fun_4_f32;
-kernel_fun_t_f32 generic_kernel_fun_8_f32;
-kernel_fun_t_f64 generic_kernel_fun_4_f64;
-kernel_fun_t_f64 generic_kernel_fun_8_f64;
+f32_kernel_fun_t f32_generic_kernel_fun_4;
+f32_kernel_fun_t f32_generic_kernel_fun_8;
+f64_kernel_fun_t f64_generic_kernel_fun_4;
+f64_kernel_fun_t f64_generic_kernel_fun_8;
 
-kernel_t_f32 generic_kernel_4_f32;
-kernel_t_f32 generic_kernel_8_f32;
-kernel_t_f64 generic_kernel_4_f64;
-kernel_t_f64 generic_kernel_8_f64;
+f32_kernel_t f32_generic_kernel_4;
+f32_kernel_t f32_generic_kernel_8;
+f64_kernel_t f64_generic_kernel_4;
+f64_kernel_t f64_generic_kernel_8;
 
 #endif

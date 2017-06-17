@@ -4,8 +4,8 @@
 #include "kernel/x86_64/avx_kernel.h"
 #include "kernel/x86_64/cpuid.h"
 
-kernel_t_f64 decide_kernel() {
-	kernel_t_f64 kernel_cand = generic_kernel_4_f64;
+f64_kernel_t decide_kernel() {
+	f64_kernel_t kernel_cand = f64_generic_kernel_4;
 
 	/* check whether feature set availble */
 	int eax, ebx, ecx, edx;
