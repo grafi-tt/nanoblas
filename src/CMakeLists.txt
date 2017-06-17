@@ -1,7 +1,6 @@
 add_subdirectory(kernel)
+add_subdirectory(internal)
 set(SRCS ${SRCS}
-	${CMAKE_CURRENT_SOURCE_DIR}/sched.c
 	${CMAKE_CURRENT_SOURCE_DIR}/gemm.c
-	${CMAKE_CURRENT_SOURCE_DIR}/iter_fxx.c
 	PARENT_SCOPE
 )

@@ -1,5 +1,5 @@
-#ifndef NANOBLAS_ITER_H
-#define NANOBLAS_ITER_H
+#ifndef NANOBLAS_INTERNAL_ITER_H
+#define NANOBLAS_INTERNAL_ITER_H
 
 #include <stddef.h>
 

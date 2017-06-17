@@ -1,5 +1,5 @@
-#ifndef NANOBLAS_CONST_H
-#define NANOBLAS_CONST_H
+#ifndef NANOBLAS_INTERNAL_MACRO_H
+#define NANOBLAS_INTERNAL_MACRO_H
 
 typedef float f32;
 typedef double f64;
@@ -33,3 +33,8 @@ typedef double f64;
 #define ADD_PREFIX(name) ADD_PREFIX_HELPER1(name, PREFIX)
 #define ADD_PREFIX_HELPER1(name, typ) ADD_PREFIX_HELPER2(name, typ)
 #define ADD_PREFIX_HELPER2(name, typ) typ##name
+
+#define kernel_t APPEND_FTYPE(kernel_t)
+#define kernel_fun_t APPEND_FTYPE(kernel_fun_t)
+#define sched_state_t APPEND_FTYPE(sched_state_t)
+#define decide_kernel APPEND_FTYPE(decide_kernel)

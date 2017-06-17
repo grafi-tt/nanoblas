@@ -3,20 +3,10 @@
 
 #include "kernel.h"
 
-#define avx_kernel_fun APPEND_FTYPE(avx_kernel_fun)
-void avx_kernel_fun(
-		const FTYPE *restrict a_pack, const FTYPE *restrict b_pack,
-		int k_len, int m_sub_len, int n_sub_len,
-		FTYPE* restrict c, ptrdiff_t ldc, const sched_state_t *st);
+kernel_fun_t_f32 avx_kernel_fun_f32;
+/* kernel_fun_t_f64 avx_kernel_fun_f64; */
 
-#define avx_kernel APPEND_FTYPE(avx_kernel)
-kernel_t avx_kernel = { &avx_kernel_fun,
-#if USE_F64
-	8
-#endif
-#if USE_F32
-	4
-#endif
-};
+kernel_t_f32 avx_kernel_f32;
+/* kernel_t_f64 avx_kernel_f64; */
 
 #endif

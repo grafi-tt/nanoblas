@@ -1,10 +1,12 @@
 #include <stdint.h>
 #include "gemm.h"
-#include "iter.h"
 #include "kernel.h"
-#include "sched.h"
-#include "util.h"
+#include "internal/iter.h"
+#include "internal/macro.h"
+#include "internal/sched.h"
+#include "internal/util.h"
 
+#define gemm ADD_PREFIX(gemm)
 void gemm(
 		char transa, char transb, size_t m, size_t n, size_t k,
 		FTYPE alpha, FTYPE *restrict a, ptrdiff_t lda,

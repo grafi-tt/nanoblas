@@ -1,4 +1,4 @@
-#include "iter.h"
+#include "internal/iter.h"
 
 void init_iter_by_blk_spec(size_t sum, int max_len, int unit_len, iter_t *it) {
 	it->pos = 0;

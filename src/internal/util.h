@@ -1,7 +1,7 @@
-#ifndef NANOBLAS_UTIL_H
-#define NANOBLAS_UTIL_H
+#ifndef NANOBLAS_INTERNAL_UTIL_H
+#define NANOBLAS_INTERNAL_UTIL_H
 
-#include "const.h"
+#include "internal/macro.h"
 
 static inline int imin(int a, int b) {
 	return a < b ? a : b;

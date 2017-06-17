@@ -3,8 +3,8 @@
 #endif
 
 #include <assert.h>
-#include "sched.h"
-#include "sched/fixture.h"
+#include "internal/sched.h"
+#include "internal/sched/fixture.h"
 
 void test_s1() {
 	sched_state_t sched = s1;

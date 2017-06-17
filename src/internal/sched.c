@@ -1,5 +1,5 @@
-#include "sched.h"
-#include "util.h"
+#include "internal/sched.h"
+#include "internal/util.h"
 
 void start_sched(sched_state_t *st) {
 	st->k_packed_len = 0;

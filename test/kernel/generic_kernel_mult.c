@@ -6,7 +6,10 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include "internal/sched.h"
 #include "kernel/generic_kernel.h"
+
+#define generic_kernel_8 APPEND_FTYPE(generic_kernel_8)
 
 static FTYPE a[8*64];
 static FTYPE b[8*64];
@@ -58,7 +61,7 @@ int main() {
 	start_sched(&b_sched);
 	pack_all(&b_sched);
 	/* run kernel */
-	generic_kernel.fun(a_pack, b_pack, 64, 8, 8, c, 8, NULL);
+	generic_kernel_8.fun(a_pack, b_pack, 64, 8, 8, c, 8, NULL);
 	/* create ans */
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {

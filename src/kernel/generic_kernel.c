@@ -1,5 +1,12 @@
-#include "generic_kernel.h"
+#include "kernel/generic_kernel.h"
+#include "internal/macro.h"
 
+
+#define APPEND_UNIT_LEN(name) APPEND_UNIT_LEN_HELPER1(name, UNIT_LEN)
+#define APPEND_UNIT_LEN_HELPER1(name, len) APPEND_UNIT_LEN_HELPER2(name, len)
+#define APPEND_UNIT_LEN_HELPER2(name, len) name##_##len
+
+#define generic_kernel_fun APPEND_FTYPE(APPEND_UNIT_LEN(generic_kernel_fun))
 __attribute__((optimize("unroll-loops")))
 void generic_kernel_fun(
 		const FTYPE *restrict a_pack, const FTYPE *restrict b_pack,
@@ -82,4 +89,5 @@ void generic_kernel_fun(
 	}
 }
 
+#define generic_kernel APPEND_FTYPE(APPEND_UNIT_LEN(generic_kernel))
 kernel_t generic_kernel = { &generic_kernel_fun, UNIT_LEN };

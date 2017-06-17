@@ -3,8 +3,8 @@
 #endif
 
 #include <assert.h>
-#include "sched.h"
-#include "sched/fixture.h"
+#include "internal/sched.h"
+#include "internal/sched/fixture.h"
 
 static FTYPE mtx[64*100];
 static FTYPE mtx_pack[64*64];
