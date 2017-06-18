@@ -7,15 +7,15 @@
 extern "C" {
 #endif
 
-f32_kernel_fun_t f32_generic_kernel_fun_4;
-f32_kernel_fun_t f32_generic_kernel_fun_8;
-f64_kernel_fun_t f64_generic_kernel_fun_4;
-f64_kernel_fun_t f64_generic_kernel_fun_8;
+nanoblas_f32_kernel_fun_t nanoblas_f32_generic_kernel_fun_4;
+nanoblas_f32_kernel_fun_t nanoblas_f32_generic_kernel_fun_8;
+nanoblas_f64_kernel_fun_t nanoblas_f64_generic_kernel_fun_4;
+nanoblas_f64_kernel_fun_t nanoblas_f64_generic_kernel_fun_8;
 
-f32_kernel_t f32_generic_kernel_4;
-f32_kernel_t f32_generic_kernel_8;
-f64_kernel_t f64_generic_kernel_4;
-f64_kernel_t f64_generic_kernel_8;
+nanoblas_f32_kernel_t nanoblas_f32_generic_kernel_4;
+nanoblas_f32_kernel_t nanoblas_f32_generic_kernel_8;
+nanoblas_f64_kernel_t nanoblas_f64_generic_kernel_4;
+nanoblas_f64_kernel_t nanoblas_f64_generic_kernel_8;
 
 #ifdef __cplusplus
 }

@@ -1,43 +1,47 @@
 #ifndef NANOBLAS_INTERNAL_MACRO_H
 #define NANOBLAS_INTERNAL_MACRO_H
 
-typedef float f32;
-typedef double f64;
 
-#if defined(USE_F32) ^ defined(USE_F64)
+#define NAMESPACE nanoblas_
 
 #ifdef USE_F32
-#define FTYPE f32
-#define PREFIX nanoblas_s
+#define PREFIX f32_
+#define FTYPE float
+#define SIGN s
 #endif
 
 #ifdef USE_F64
-#define FTYPE f64
-#define PREFIX nanoblas_d
+#define PREFIX f64_
+#define FTYPE double
+#define SIGN d
 #endif
-
-#else
-#error please specify one of USE_F32 or USE_F64
-#endif
-
-#define ADD_FTYPE(name) ADD_FTYPE_HELPER1(name, FTYPE)
-#define ADD_FTYPE_HELPER1(name, typ) ADD_FTYPE_HELPER2(name, typ)
-#define ADD_FTYPE_HELPER2(name, typ) typ##_##name
-
-#define ADD_PREFIX(name) ADD_PREFIX_HELPER1(name, PREFIX)
-#define ADD_PREFIX_HELPER1(name, typ) ADD_PREFIX_HELPER2(name, typ)
-#define ADD_PREFIX_HELPER2(name, typ) typ##name
 
 /* types */
-#define kernel_t ADD_FTYPE(kernel_t)
-#define kernel_fun_t ADD_FTYPE(kernel_fun_t)
-#define kernel_state_t ADD_FTYPE(kernel_state_t)
-#define prepack_state_t ADD_FTYPE(prepack_state_t)
+#define kernel_t         JOIN(NAMESPACE, PREFIX, kernel_t)
+#define f32_kernel_t     JOIN(NAMESPACE, f32_kernel_t)
+#define f64_kernel_t     JOIN(NAMESPACE, f64_kernel_t)
+#define kernel_fun_t     JOIN(NAMESPACE, PREFIX, kernel_fun_t)
+#define f32_kernel_fun_t JOIN(NAMESPACE, f32_kernel_fun_t)
+#define f64_kernel_fun_t JOIN(NAMESPACE, f64_kernel_fun_t)
+#define kernel_state_t   JOIN(NAMESPACE, PREFIX, kernel_state_t)
+#define prepack_state_t  JOIN(NAMESPACE, PREFIX, prepack_state_t)
 
 /* members of nanoblas_t */
-#define kernel ADD_FTYPE(kernel)
-#define blk_m_len ADD_FTYPE(blk_m_len)
-#define blk_n_len ADD_FTYPE(blk_n_len)
-#define blk_k_len ADD_FTYPE(blk_k_len)
+#define kernel    JOIN(PREFIX, kernel)
+#define blk_m_len JOIN(PREFIX, blk_m_len)
+#define blk_n_len JOIN(PREFIX, blk_n_len)
+#define blk_k_len JOIN(PREFIX, blk_k_len)
+
+/* join */
+#define JOIN(...) JOIN_HELPER_1(__VA_ARGS__, ARITY_4, ARITY_3, ARITY_2, dummy)
+#define JOIN_HELPER_1(v1, v2, v3, v4, arity, ...) JOIN_HELPER_2(v1, v2, v3, v4, arity)
+#define JOIN_HELPER_2(v1, v2, v3, v4, arity)      JOIN_##arity(v1, v2, v3, v4)
+
+#define JOIN_ARITY_4(v1, v2, v3, v4)  JOIN_OP_1(JOIN_ARITY_3(v1, v2, v3, dummy), v4)
+#define JOIN_ARITY_3(v1, v2, v3, ...) JOIN_OP_1(JOIN_ARITY_2(v1, v2, dummy), v3)
+#define JOIN_ARITY_2(v1, v2, ...)     JOIN_OP_1(v1, v2)
+
+#define JOIN_OP_1(v1, v2) JOIN_OP_2(v1, v2)
+#define JOIN_OP_2(v1, v2) v1##v2
 
 #endif

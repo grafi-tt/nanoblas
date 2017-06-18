@@ -3,12 +3,7 @@
 #include "kernel/generic_kernel.h"
 #include "internal/macro.h"
 
-
-#define APPEND_UNIT_LEN(name) APPEND_UNIT_LEN_HELPER1(name, UNIT_LEN)
-#define APPEND_UNIT_LEN_HELPER1(name, len) APPEND_UNIT_LEN_HELPER2(name, len)
-#define APPEND_UNIT_LEN_HELPER2(name, len) name##_##len
-
-#define generic_kernel_fun ADD_FTYPE(APPEND_UNIT_LEN(generic_kernel_fun))
+#define generic_kernel_fun JOIN(NAMESPACE, PREFIX, generic_kernel_fun_, UNIT_LEN)
 __attribute__((optimize("unroll-loops")))
 void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) {
 
@@ -96,5 +91,5 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 	}
 }
 
-#define generic_kernel ADD_FTYPE(APPEND_UNIT_LEN(generic_kernel))
+#define generic_kernel JOIN(NAMESPACE, PREFIX, generic_kernel_, UNIT_LEN)
 kernel_t generic_kernel = { &generic_kernel_fun, UNIT_LEN };

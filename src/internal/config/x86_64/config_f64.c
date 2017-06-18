@@ -1,10 +1,9 @@
 #include "internal/config.h"
 #include "kernel/x86_64/cpuid.h"
-
 #include "kernel/generic_kernel.h"
 #include "kernel/x86_64/avx_kernel.h"
 
-f64_kernel_t decide_kernel() {
+f64_kernel_t f64_decide_kernel() {
 	f64_kernel_t kernel_cand = f64_generic_kernel_4;
 
 	/* check whether feature set availble */

@@ -3,7 +3,7 @@
 
 #include "nanoblas_types.h"
 
-struct f32_prepack_state_t {
+struct nanoblas_f32_prepack_state_t {
 	const float *next_cur;
 	float *next_pack_cur;
 	int mn_sched_len;
@@ -17,7 +17,7 @@ struct f32_prepack_state_t {
 	const int unit_len;
 };
 
-struct f64_prepack_state_t {
+struct nanoblas_f64_prepack_state_t {
 	const double *next_cur;
 	double *next_pack_cur;
 	int mn_sched_len;

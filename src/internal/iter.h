@@ -2,6 +2,7 @@
 #define NANOBLAS_INTERNAL_ITER_H
 
 #include <stddef.h>
+#include "internal/macro.h"
 
 typedef struct {
 	size_t pos;
@@ -21,8 +22,13 @@ typedef struct {
 extern "C" {
 #endif
 
+#define iter_by_blk_spec JOIN(NAMESPACE, iter_by_blk_spec)
 void iter_by_blk_spec(size_t len, int max_len, int unit_len, iter_t *it);
+
+#define next JOIN(NAMESPACE, next)
 void next(iter_t *it);
+
+#define nest_next JOIN(NAMESPACE, nest_next)
 void nest_next(nest_iter_t *nit);
 
 #ifdef __cplusplus

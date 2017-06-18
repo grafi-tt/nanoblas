@@ -13,7 +13,7 @@ static inline int imin(int a, int b) {
 static inline int imax(int a, int b) {
 	return a > b ? a : b;
 }
-#define fswap ADD_FTYPE(fswap)
+#define fswap JOIN(PREFIX, fswap)
 static inline void fswap(FTYPE *restrict *restrict p, FTYPE *restrict *restrict q) {
 	FTYPE *tmp = *p;
 	*p = *q;

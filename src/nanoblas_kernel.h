@@ -3,7 +3,7 @@
 
 #include "nanoblas_types.h"
 
-struct f32_kernel_state_t {
+struct nanoblas_f32_kernel_state_t {
 	const float *a_pack_cur;
 	const float *b_pack_cur;
 	float *c_cur;
@@ -13,7 +13,7 @@ struct f32_kernel_state_t {
 	const int k_len;
 };
 
-struct f64_kernel_state_t {
+struct nanoblas_f64_kernel_state_t {
 	const double *a_pack_cur;
 	const double *b_pack_cur;
 	double *c_cur;

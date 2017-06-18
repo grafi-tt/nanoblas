@@ -8,8 +8,8 @@
 #include "internal/prepack.h"
 #include "internal/util.h"
 
-#define gemm ADD_PREFIX(gemm)
-void gemm_do(nanoblas_t *nb,
+#define gemm_do JOIN(NAMESPACE, SIGN, gemm_do)
+void gemm_do(const nanoblas_t *nb,
 		const bool is_transposed, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
 		const size_t M, const size_t N, const size_t K,
 		const FTYPE alpha, const FTYPE *A, const ptrdiff_t lda, const FTYPE *B, const ptrdiff_t ldb,
@@ -17,8 +17,6 @@ void gemm_do(nanoblas_t *nb,
 
 	(void)alpha;
 	(void)beta;
-
-	nanoblas_init(nb);
 
 	/* get interval */
 	const ptrdiff_t interval_m = TransA ? 1 : lda;
@@ -168,8 +166,8 @@ void gemm_do(nanoblas_t *nb,
 
 }
 
-#define gemm ADD_PREFIX(gemm)
-void gemm(nanoblas_t *nb,
+#define gemm JOIN(NAMESPACE, SIGN, gemm)
+void gemm(const nanoblas_t *nb,
 		const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
 		const size_t M, const size_t N, const size_t K,
 		const FTYPE alpha, const FTYPE *A, const ptrdiff_t lda, const FTYPE *B, const ptrdiff_t ldb,

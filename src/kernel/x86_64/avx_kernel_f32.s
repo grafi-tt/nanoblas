@@ -18,8 +18,8 @@
 .section .text
 
 .align 4
-.globl f32_avx_kernel
-f32_avx_kernel:
+.globl nanoblas_f32_avx_kernel
+nanoblas_f32_avx_kernel:
 	/* escape */
 	pushq %rbp
 	pushq %rbx

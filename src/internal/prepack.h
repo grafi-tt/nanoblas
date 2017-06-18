@@ -8,13 +8,13 @@
 extern "C" {
 #endif
 
-#define start_prepack ADD_FTYPE(start_prepack)
+#define start_prepack JOIN(NAMESPACE, PREFIX, start_prepack)
 void start_prepack(prepack_state_t *st);
 
-#define step_prepack ADD_FTYPE(step_prepack)
+#define step_prepack JOIN(NAMESPACE, PREFIX, step_prepack)
 void step_prepack(prepack_state_t *st);
 
-#define pack_all ADD_FTYPE(pack_all)
+#define pack_all JOIN(NAMESPACE, PREFIX, pack_all)
 void pack_all(prepack_state_t *st);
 
 #ifdef __cplusplus
