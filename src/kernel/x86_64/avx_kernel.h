@@ -8,10 +8,7 @@ extern "C" {
 #endif
 
 nanoblas_f32_kernel_fun_t nanoblas_f32_avx_kernel_fun;
-/* f64_kernel_fun_t f64_avx_kernel_fun; */
-
 nanoblas_f32_kernel_t nanoblas_f32_avx_kernel;
-/* f64_kernel_t f64_avx_kernel; */
 
 #ifdef __cplusplus
 }

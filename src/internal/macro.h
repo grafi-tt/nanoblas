@@ -18,11 +18,7 @@
 
 /* types */
 #define kernel_t         JOIN(NAMESPACE, PREFIX, kernel_t)
-#define f32_kernel_t     JOIN(NAMESPACE, f32_kernel_t)
-#define f64_kernel_t     JOIN(NAMESPACE, f64_kernel_t)
 #define kernel_fun_t     JOIN(NAMESPACE, PREFIX, kernel_fun_t)
-#define f32_kernel_fun_t JOIN(NAMESPACE, f32_kernel_fun_t)
-#define f64_kernel_fun_t JOIN(NAMESPACE, f64_kernel_fun_t)
 #define kernel_state_t   JOIN(NAMESPACE, PREFIX, kernel_state_t)
 #define prepack_state_t  JOIN(NAMESPACE, PREFIX, prepack_state_t)
 

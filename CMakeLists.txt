@@ -18,22 +18,26 @@ include(${PROJECT_SOURCE_DIR}/cmake/detect_arch.cmake)
 add_subdirectory(src)
 
 foreach(s IN LISTS SRCS)
-	if (${s} MATCHES "_f32|_f64|_fxx")
-		set(SRCS_ONCE ${SRCS_ONCE} ${s})
+	if (${s} MATCHES "_f32")
+		set(SRCS_F32 ${SRCS_F32} ${s})
+	elseif(${s} MATCHES "_f64")
+		set(SRCS_F64 ${SRCS_F64} ${s})
+	elseif(${s} MATCHES "_fxx")
+		set(SRCS_FXX ${SRCS_FXX} ${s})
 	else()
 		set(SRCS_TWICE ${SRCS_TWICE} ${s})
 	endif()
 endforeach()
 
-add_library(nanoblas_once OBJECT ${SRCS_ONCE})
-add_library(nanoblas_f32 OBJECT ${SRCS_TWICE})
-add_library(nanoblas_f64 OBJECT ${SRCS_TWICE})
-my_target_compile_setup(nanoblas_once nanoblas_f32 nanoblas_f64)
+add_library(nanoblas_fxx OBJECT ${SRCS_FXX})
+add_library(nanoblas_f32 OBJECT ${SRCS_TWICE} ${SRCS_F32})
+add_library(nanoblas_f64 OBJECT ${SRCS_TWICE} ${SRCS_F64})
+my_target_compile_setup(nanoblas_fxx nanoblas_f32 nanoblas_f64)
 target_compile_definitions(nanoblas_f32 PRIVATE USE_F32)
 target_compile_definitions(nanoblas_f64 PRIVATE USE_F64)
 
 add_library(nanoblas
-	$<TARGET_OBJECTS:nanoblas_once>
+	$<TARGET_OBJECTS:nanoblas_fxx>
 	$<TARGET_OBJECTS:nanoblas_f32>
 	$<TARGET_OBJECTS:nanoblas_f64>
 )
