@@ -8,17 +8,15 @@
 #include "internal/prepack/fixture.h"
 
 void test_s1() {
-	prepack_state_t sched = s1;
-	start_prepack(&sched);
-	assert(sched.k_sched_len == 16);
-	assert(sched.mn_sched_len == 8);
+	start_prepack(&s1);
+	assert(s1.k_sched_len == 16);
+	assert(s1.mn_sched_len == 8);
 }
 
 void test_s3() {
-	prepack_state_t sched = s3;
-	start_prepack(&sched);
-	assert(sched.k_sched_len == 15);
-	assert(sched.mn_sched_len == 3);
+	start_prepack(&s3);
+	assert(s3.k_sched_len == 15);
+	assert(s3.mn_sched_len == 3);
 }
 
 int main() {

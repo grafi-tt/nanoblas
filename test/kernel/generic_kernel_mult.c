@@ -2,8 +2,6 @@
 #undef NDEBUG
 #endif
 
-#define UNIT_LEN 8
-
 #include <assert.h>
 #include <stdio.h>
 #include "nanoblas_kernel.h"
