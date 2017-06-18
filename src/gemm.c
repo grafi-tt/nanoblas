@@ -39,10 +39,10 @@ void gemm_do(const nanoblas_t *nb,
 	FTYPE *mem_ptr = mem;
 	const int mem_offset = ((uintptr_t)mem & 32)/sizeof(FTYPE);
 	if (mem_offset) mem_ptr += 32/sizeof(FTYPE) - mem_offset;
-	FTYPE *restrict a_pack      = mem_ptr;
-	FTYPE *restrict a_next_pack = mem_ptr +   blk_m_len*blk_k_len;
-	FTYPE *restrict b_pack      = mem_ptr + 2*blk_m_len*blk_k_len;
-	FTYPE *restrict b_next_pack = mem_ptr + 2*blk_m_len*blk_k_len + blk_k_len*blk_n_len;
+	FTYPE *a_pack      = mem_ptr;
+	FTYPE *a_next_pack = mem_ptr +   blk_m_len*blk_k_len;
+	FTYPE *b_pack      = mem_ptr + 2*blk_m_len*blk_k_len;
+	FTYPE *b_next_pack = mem_ptr + 2*blk_m_len*blk_k_len + blk_k_len*blk_n_len;
 
 	/* get iterator */
 	iter_t _m_it, _n_it, _k_it;
@@ -69,8 +69,8 @@ void gemm_do(const nanoblas_t *nb,
 
 	/* first packing */
 	prepack_state_t *current_prepack_st_p = NULL;
-	FTYPE *restrict a_pack_cur = a_pack;
-	FTYPE *restrict b_pack_cur = b_pack;
+	FTYPE *a_pack_cur = a_pack;
+	FTYPE *b_pack_cur = b_pack;
 	prepack_state_t a_prepack_st = {
 		.next_cur = A,
 		.next_pack_cur = a_next_pack,
@@ -90,9 +90,7 @@ void gemm_do(const nanoblas_t *nb,
 		.unit_len = unit_len,
 	};
 	start_prepack(&a_prepack_st);
-	pack_all(&a_prepack_st);
 	start_prepack(&b_prepack_st);
-	pack_all(&b_prepack_st);
 
 	do {
 		const int m_len = m_it3->len;
@@ -103,9 +101,31 @@ void gemm_do(const nanoblas_t *nb,
 		const size_t m_end = m_it3->pos + m_len;
 		const size_t n_end = n_it3->pos + n_len;
 
+		if (m_it3->pos == 0) {
+			if (b_prepack_st.mn_sched_len != 0) {
+				pack_all(&b_prepack_st);
+			}
+			nest_next(&it2);
+			if (!it2.is_end) {
+				fswap(&b_pack, &b_next_pack);
+				b_pack_cur = b_pack;
+				b_prepack_st.next_cur =  B + interval_k_in_b*k_it2->pos + interval_n*n_it2->pos,
+				b_prepack_st.next_pack_cur = b_next_pack,
+				b_prepack_st.mn_packed_len = 0;
+				b_prepack_st.k_packed_len = 0;
+				b_prepack_st.mn_next_len = n_it2->len,
+				b_prepack_st.k_next_len = k_it2->len,
+				start_prepack(&b_prepack_st);
+			}
+		}
+
+		if (a_prepack_st.mn_sched_len != 0) {
+			pack_all(&a_prepack_st);
+		}
 		nest_next(&it3);
 		if (!it3.is_end) {
 			fswap(&a_pack, &a_next_pack);
+			a_pack_cur = a_pack;
 			a_prepack_st.next_cur = A + interval_m*m_it3->pos + interval_k_in_a*k_it3->pos,
 			a_prepack_st.next_pack_cur = a_next_pack,
 			a_prepack_st.mn_packed_len = 0;
@@ -114,21 +134,6 @@ void gemm_do(const nanoblas_t *nb,
 			a_prepack_st.k_next_len = k_it3->len,
 			start_prepack(&a_prepack_st);
 			current_prepack_st_p = &a_prepack_st;
-			a_pack_cur = a_pack;
-		}
-		if (m_it3->pos == 0) {
-			nest_next(&it2);
-			if (!it2.is_end) {
-				fswap(&b_pack, &b_next_pack);
-				b_prepack_st.next_cur =  B + interval_k_in_b*k_it2->pos + interval_n*n_it2->pos,
-				b_prepack_st.next_pack_cur = b_next_pack,
-				b_prepack_st.mn_packed_len = 0;
-				b_prepack_st.k_packed_len = 0;
-				b_prepack_st.mn_next_len = n_it2->len,
-				b_prepack_st.k_next_len = k_it2->len,
-				start_prepack(&b_prepack_st);
-				b_pack_cur = b_pack;
-			}
 		}
 
 		kernel_state_t kernel_st = {
