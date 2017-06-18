@@ -8,22 +8,16 @@ typedef double f64;
 
 #ifdef USE_F32
 #define FTYPE f32
-#define BLK_MN_LEN 80
-#define BLK_K_LEN 64
-#define PREFIX s
+#define PREFIX nanoblas_s
 #endif
 
 #ifdef USE_F64
 #define FTYPE f64
-#define BLK_MN_LEN 40
-#define BLK_K_LEN 64
-#define PREFIX d
+#define PREFIX nanoblas_d
 #endif
 
 #else
 #error please specify one of USE_F32 or USE_F64
-#endif
-
 #endif
 
 #define ADD_FTYPE(name) ADD_FTYPE_HELPER1(name, FTYPE)
@@ -34,7 +28,16 @@ typedef double f64;
 #define ADD_PREFIX_HELPER1(name, typ) ADD_PREFIX_HELPER2(name, typ)
 #define ADD_PREFIX_HELPER2(name, typ) typ##name
 
+/* types */
 #define kernel_t ADD_FTYPE(kernel_t)
 #define kernel_fun_t ADD_FTYPE(kernel_fun_t)
-#define sched_state_t ADD_FTYPE(sched_state_t)
-#define decide_kernel ADD_FTYPE(decide_kernel)
+#define kernel_state_t ADD_FTYPE(kernel_state_t)
+#define prepack_state_t ADD_FTYPE(prepack_state_t)
+
+/* members of nanoblas_t */
+#define kernel ADD_FTYPE(kernel)
+#define blk_m_len ADD_FTYPE(blk_m_len)
+#define blk_n_len ADD_FTYPE(blk_n_len)
+#define blk_k_len ADD_FTYPE(blk_k_len)
+
+#endif

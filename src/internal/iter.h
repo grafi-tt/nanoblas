@@ -17,8 +17,16 @@ typedef struct {
 	iter_t iters[];
 } nest_iter_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void iter_by_blk_spec(size_t len, int max_len, int unit_len, iter_t *it);
 void next(iter_t *it);
 void nest_next(nest_iter_t *nit);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,8 +3,9 @@
 #endif
 
 #include <assert.h>
-#include "internal/sched.h"
-#include "internal/sched/fixture.h"
+#include "nanoblas_prepack.h"
+#include "internal/prepack.h"
+#include "internal/prepack/fixture.h"
 
 static FTYPE mtx[64*100];
 static FTYPE mtx_pack[64*64];
@@ -25,10 +26,10 @@ void test_s1() {
 			}
 		}
 	}
-	sched_state_t sched = s1;
+	prepack_state_t sched = s1;
 	sched.next_cur = mtx;
 	sched.next_pack_cur = mtx_pack;
-	start_sched(&sched);
+	start_prepack(&sched);
 	pack_all(&sched);
 	for (int i = 0; i < 64*64; i++) {
 		/* printf("mtx_pack[%d]=%f, mtx_pack_ans[%d]=%f\n", i, mtx_pack[i], i, mtx_pack_ans[i]); */
@@ -51,10 +52,10 @@ void test_s2() {
 			}
 		}
 	}
-	sched_state_t sched = s2;
+	prepack_state_t sched = s2;
 	sched.next_cur = mtx;
 	sched.next_pack_cur = mtx_pack;
-	start_sched(&sched);
+	start_prepack(&sched);
 	pack_all(&sched);
 	for (int i = 0; i < 42*64; i++) {
 		/* printf("mtx_pack[%d]=%f, mtx_pack_ans[%d]=%f\n", i, mtx_pack[i], i, mtx_pack_ans[i]); */

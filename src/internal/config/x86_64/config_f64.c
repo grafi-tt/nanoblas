@@ -1,11 +1,11 @@
-#include "kernel.h"
+#include "internal/config.h"
+#include "kernel/x86_64/cpuid.h"
 
 #include "kernel/generic_kernel.h"
 #include "kernel/x86_64/avx_kernel.h"
-#include "kernel/x86_64/cpuid.h"
 
-f32_kernel_t decide_kernel() {
-	f32_kernel_t kernel_cand = f32_generic_kernel_8;
+f64_kernel_t decide_kernel() {
+	f64_kernel_t kernel_cand = f64_generic_kernel_4;
 
 	/* check whether feature set availble */
 	int eax, ebx, ecx, edx;
@@ -20,7 +20,7 @@ f32_kernel_t decide_kernel() {
 	/* kernel_cand = &sse2_kernel; */
 	/* check avx */
 	if (!(ecx && (1<<28))) goto decided;
-	kernel_cand = f32_avx_kernel;
+	/* kernel_cand = avx_kernel_f64; */
 	/* check fma */
 	if (!(ecx && (1<<12))) goto decided;
 	/* kernel_cand = &fma_kernel; */

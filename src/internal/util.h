@@ -3,6 +3,10 @@
 
 #include "internal/macro.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline int imin(int a, int b) {
 	return a < b ? a : b;
 }
@@ -15,5 +19,9 @@ static inline void fswap(FTYPE *restrict *restrict p, FTYPE *restrict *restrict 
 	*p = *q;
 	*q = tmp;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

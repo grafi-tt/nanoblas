@@ -1,14 +1,13 @@
-#include "internal/sched.h"
+#include "nanoblas_prepack.h"
+#include "internal/prepack.h"
 #include "internal/util.h"
 
-void start_sched(sched_state_t *st) {
-	st->k_packed_len = 0;
-	st->mn_packed_len = 0;
+void start_prepack(prepack_state_t *st) {
 	st->k_sched_len = imin(st->k_next_len, 2*st->unit_len);
 	st->mn_sched_len = imin(st->mn_next_len, st->unit_len);
 }
 
-void step_sched(sched_state_t *st) {
+void step_prepack(prepack_state_t *st) {
 	st->next_cur += st->k_sched_len*st->interval_k;
 	st->next_pack_cur += st->k_sched_len * st->mn_sched_len;
 	st->k_packed_len += st->k_sched_len;
@@ -22,7 +21,7 @@ void step_sched(sched_state_t *st) {
 	st->k_sched_len = imin(2*st->unit_len, st->k_next_len - st->k_packed_len);
 }
 
-void pack_all(sched_state_t *st) {
+void pack_all(prepack_state_t *st) {
 	int mn_cnt = 0;
 	const ptrdiff_t proceed_k = st->interval_k - st->unit_len*st->interval_mn;
 	while (st->mn_packed_len < st->mn_next_len) {

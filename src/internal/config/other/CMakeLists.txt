@@ -1,0 +1,5 @@
+set(SRCS ${SRCS}
+	${CMAKE_CURRENT_SOURCE_DIR}/config_f32.c
+	${CMAKE_CURRENT_SOURCE_DIR}/config_f64.c
+	PARENT_SCOPE
+)

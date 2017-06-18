@@ -6,9 +6,11 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include "nanoblas_kernel.h"
+#include "nanoblas_prepack.h"
 #include "kernel/generic_kernel.h"
 #include "internal/macro.h"
-#include "internal/sched.h"
+#include "internal/prepack.h"
 
 #define generic_kernel_8 ADD_FTYPE(generic_kernel_8)
 
@@ -39,30 +41,39 @@ int main() {
 		}
 	}
 	/* pack data */
-	sched_state_t a_sched = {
+	prepack_state_t a_prepack_st = {
 		.next_cur = a,
 		.next_pack_cur = a_pack,
-		.k_next_len = 64,
 		.mn_next_len = 8,
-		.interval_k = 1,
+		.k_next_len = 64,
 		.interval_mn = 64,
+		.interval_k = 1,
 		.unit_len = 8
 	};
-	start_sched(&a_sched);
-	pack_all(&a_sched);
-	sched_state_t b_sched = {
+	start_prepack(&a_prepack_st);
+	pack_all(&a_prepack_st);
+	prepack_state_t b_prepack_st = {
 		.next_cur = b,
 		.next_pack_cur = b_pack,
-		.k_next_len = 64,
 		.mn_next_len = 8,
-		.interval_k = 8,
+		.k_next_len = 64,
 		.interval_mn = 1,
+		.interval_k = 8,
 		.unit_len = 8
 	};
-	start_sched(&b_sched);
-	pack_all(&b_sched);
+	start_prepack(&b_prepack_st);
+	pack_all(&b_prepack_st);
 	/* run kernel */
-	generic_kernel_8.fun(a_pack, b_pack, 64, 8, 8, c, 8, NULL);
+	kernel_state_t kernel_st = {
+		.a_pack_cur = a_pack,
+		.b_pack_cur = b_pack,
+		.c_cur = c,
+		.m_sub_len = 8,
+		.n_sub_len = 8,
+		.ldc = 8,
+		.k_len = 64,
+	};
+	generic_kernel_8.fun(&kernel_st, NULL);
 	/* create ans */
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
