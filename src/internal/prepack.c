@@ -2,44 +2,36 @@
 #include "internal/prepack.h"
 #include "internal/util.h"
 
-void start_prepack(prepack_state_t *st) {
-	st->k_sched_len = imin(st->k_sched_max_len, st->k_next_len);
-	st->mn_sched_len = imin(st->unit_len, st->mn_next_len);
-}
-
 void step_prepack(prepack_state_t *st) {
-	st->next_cur += st->k_sched_len*st->interval_k;
-	st->next_pack_cur += st->k_sched_len * st->mn_sched_len;
-	st->k_packed_len += st->k_sched_len;
-	if (st->k_packed_len == st->k_next_len) {
-		st->next_cur += -st->k_packed_len*st->interval_k + st->mn_sched_len*st->interval_mn;
-		st->k_packed_len = 0;
-		st->mn_packed_len += st->mn_sched_len;
-		st->mn_sched_len = imin(st->unit_len, st->mn_next_len - st->mn_packed_len);
-		if (st->mn_sched_len == 0) return;
+	st->slice_packed_size += st->sched_size;
+	if (st->slice_packed_size == st->slice_size) {
+		st->mn_len_remained -= st->mn_slice_len_real;
+		if (st->mn_len_remained == 0) return;
+		st->next_cur = st->next_pack_cur_bak + st->interval_mn*st->mn_slice_len_real;
+		st->next_cur_bak = st->next_cur;
+		st->slice_packed_size = 0;
+		st->mn_slice_len_real = imin(st->mn_slice_len_virtual, st->mn_len_remained);
 	}
-	st->k_sched_len = imin(st->k_sched_max_len, st->k_next_len - st->k_packed_len);
+	st->sched_size = imin(st->sched_max_size, st->slice_size - st->slice_packed_size);
 }
 
 void pack_all(prepack_state_t *st) {
-	int mn_cnt = 0;
-	const ptrdiff_t proceed_k = st->interval_k - st->unit_len*st->interval_mn;
-	while (st->mn_packed_len < st->mn_next_len) {
-		while (st->k_packed_len < st->k_next_len) {
-			while (mn_cnt < st->unit_len) {
-				FTYPE v = (mn_cnt < st->mn_sched_len) ? *st->next_cur : 0;
+	while (1) {
+		do {
+			do {
+				FTYPE v = (st->mn_slice_pos++ < st->mn_slice_real_len) ? *st->next_cur : 0;
 				*st->next_pack_cur++ = v;
 				st->next_cur += st->interval_mn;
-				mn_cnt++;
-			}
-			mn_cnt = 0;
-			st->next_cur += proceed_k;
-			st->k_packed_len++;
-		}
-		st->next_cur += -st->k_packed_len*st->interval_k + st->mn_sched_len*st->interval_mn;
-		st->k_packed_len = 0;
-		st->mn_packed_len += st->mn_sched_len;
-		st->mn_sched_len = imin(st->unit_len, st->mn_next_len - st->mn_packed_len);
+				st->slice_packed_size++;
+			} while (st->mn_slice_pos < st->mn_slice_len_virtual);
+			st->mn_slice_pos = 0;
+			st->next_cur += st->proceed_k;
+		} while (st->slice_packed_size < st->slice_size);
+		st->mn_len_remained -= st->mn_slice_len_real;
+		if (st->mn_len_remained == 0) return;
+		st->next_cur = st->next_pack_cur_back + st->interval_mn*st->mn_slice_len_real;
+		st->next_cur_bak = st->next_cur
+		st->slice_packed_size = 0;
+		st->mn_slice_len_real = imin(st->mn_slice_len_virtual, st->mn_len_remained);
 	}
-	st->k_sched_len = 0;
 }
