@@ -3,7 +3,6 @@
 #endif
 
 #include <assert.h>
-#include <stdio.h>
 #include "nanoblas_kernel.h"
 #include "nanoblas_prepack.h"
 #include "kernel/generic_kernel.h"

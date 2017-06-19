@@ -3,8 +3,8 @@
 #include "internal/util.h"
 
 void start_prepack(prepack_state_t *st) {
-	st->k_sched_len = imin(st->k_next_len, 2*st->unit_len);
-	st->mn_sched_len = imin(st->mn_next_len, st->unit_len);
+	st->k_sched_len = imin(st->k_sched_max_len, st->k_next_len);
+	st->mn_sched_len = imin(st->unit_len, st->mn_next_len);
 }
 
 void step_prepack(prepack_state_t *st) {
@@ -18,7 +18,7 @@ void step_prepack(prepack_state_t *st) {
 		st->mn_sched_len = imin(st->unit_len, st->mn_next_len - st->mn_packed_len);
 		if (st->mn_sched_len == 0) return;
 	}
-	st->k_sched_len = imin(2*st->unit_len, st->k_next_len - st->k_packed_len);
+	st->k_sched_len = imin(st->k_sched_max_len, st->k_next_len - st->k_packed_len);
 }
 
 void pack_all(prepack_state_t *st) {
