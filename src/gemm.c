@@ -45,26 +45,16 @@ void gemm_do(const nanoblas_t *nb,
 	FTYPE *b_next_pack = mem_ptr + 2*blk_m_len*blk_k_len + blk_k_len*blk_n_len;
 
 	/* get iterator */
-	iter_t _m_it, _n_it, _k_it;
-	iter_by_blk_spec(M, blk_m_len, unit_len, &_m_it);
+	iter_t _n_it, _k_it;
 	iter_by_blk_spec(N, blk_n_len, unit_len, &_n_it);
 	iter_by_blk_spec(K, blk_k_len, unit_len, &_k_it);
-	union {
-		char mem[sizeof(nest_iter_t) + sizeof(iter_t)*3];
-		nest_iter_t nit;
-	} it3_union = { .nit = { .depth = 3, .is_end = 0 } };
 	union {
 		char mem[sizeof(nest_iter_t) + sizeof(iter_t)*2];
 		nest_iter_t nit;
 	} it2_union = { .nit = { .depth = 2, .is_end = 0 } };
-	nest_iter_t it3 = it3_union.nit;
-	it3.iters[0] = _m_it;
-	it3.iters[1] = _n_it;
-	it3.iters[2] = _k_it;
 	nest_iter_t it2 = it2_union.nit;
-	it3.iters[0] = _n_it;
-	it3.iters[1] = _k_it;
-	iter_t *const m_it3 = &it3.iters[0], *const n_it3 = &it3.iters[1], *const k_it3 = &it3.iters[2];
+	it2.iters[0] = _n_it;
+	it2.iters[1] = _k_it;
 	iter_t *const n_it2 = &it2.iters[0], *const k_it2 = &it2.iters[1];
 
 	/* first packing */
@@ -122,20 +112,6 @@ void gemm_do(const nanoblas_t *nb,
 		if (a_prepack_st.mn_sched_len != 0) {
 			pack_all(&a_prepack_st);
 		}
-		nest_next(&it3);
-		if (!it3.is_end) {
-			fswap(&a_pack, &a_next_pack);
-			a_pack_cur = a_pack;
-			a_prepack_st.next_cur = A + interval_m*m_it3->pos + interval_k_in_a*k_it3->pos,
-			a_prepack_st.next_pack_cur = a_next_pack,
-			a_prepack_st.mn_packed_len = 0;
-			a_prepack_st.k_packed_len = 0;
-			a_prepack_st.mn_next_len = m_it3->len,
-			a_prepack_st.k_next_len = k_it3->len,
-			start_prepack(&a_prepack_st);
-			current_prepack_st_p = &a_prepack_st;
-		}
-
 		kernel_state_t kernel_st = {
 			.a_pack_cur = a_pack_cur,
 			.b_pack_cur = b_pack_cur,
@@ -143,31 +119,45 @@ void gemm_do(const nanoblas_t *nb,
 			.k_len = k_len,
 		};
 
-		for (size_t n_cur = n_pos; n_cur < n_end; n_cur += unit_len) {
-			kernel_st.n_sub_len = imin(unit_len, n_end - n_cur);
+		int m_slice_next_len;
+		do {
+			kernel_st.c_cur = C + ldc*m_cur + n_cur;
+			kernel_st.m_slice_len = m_slice_next_len;
+			m_slice_next_len = a_prepack_st->mn_slice_real_len;
 
-			for (size_t m_cur = m_pos; m_cur < m_end; m_cur += unit_len) {
-				kernel_st.m_sub_len = imin(unit_len, m_end - m_cur);
-				kernel_st.c_cur = C + ldc*m_cur + n_cur;
-
+			for (size_t n_cur = n_pos; n_cur < n_end; n_cur += unit_len) {
+				kernel_st.n_sub_len = imin(unit_len, n_end - n_cur);
 				kernel_fun(&kernel_st, current_prepack_st_p);
-
 				if (current_prepack_st_p) {
-					step_prepack(current_prepack_st_p);
-					if (current_prepack_st_p->mn_sched_len == 0) {
-						if (current_prepack_st_p == &a_prepack_st) {
-							if (b_prepack_st.mn_sched_len != 0) {
-								current_prepack_st_p = &b_prepack_st;
-								goto b_prepack_decided;
-							}
-						}
-						current_prepack_st_p = NULL;
+					int s = step_prepack(current_prepack_st_p);
+					if (s) {
+						current_prepack_st_p = b_prepack_st.mn_len_remained ? b_prepack_st : NULL;
 					}
 				}
-				b_prepack_decided: ;
 			}
-		}
-	} while (!it3.is_end);
+
+			if (current_prepack_st_p == &a_prepack_st) {
+				pack_slice(&a_prepack_st);
+			}
+			pack_cur = pack2;
+			a_prepack_st.next_pack_cur = pack1;
+			pack1 = pack_cur;
+			pack2 = a_prepack_st.next_pack_cur;
+			current_prepack_st_p = &a_prepack_st;
+
+			if (!a_prepack_st.mn_len_remained) {
+				nest_next(&it2);
+				if it2.is_end {
+					current_prepack_st_p = NULL;
+				} else {
+					a_prepack_st.next_cur = A + interval_k_in_a*k_it2->pos;
+					a_prepack_mn_len_remained = M;
+					a_prepack_st.max_sched_size = k_it2->len;
+					restart_prepack(&a_prepack_st);
+				}
+			}
+		} while (m_slice_next_len);
+	} while (!it2.is_end);
 
 }
 

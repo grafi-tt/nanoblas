@@ -19,16 +19,16 @@ static inline prepack_state_t prepack_state_new(
 		.next_pack_cur = next_pack,
 		.mn_slice_pos = 0,
 		.sched_size = imin(max_sched_size, unit_len*k_len),
-		.mn_slice_len_virtual = unit_len,
 		.mn_slice_len_real = imin(unit_len, mn_len),
+		.mn_slice_len_virtual = unit_len,
 		.proceed_k = interval_k - unit_len*interval_mn,
-		.next_pack_cur_bak = next_pack,
+		.next_cur_bak = next,
 		.slice_packed_size = 0,
 		.mn_len_remained = mn_len,
 		.slice_size = unit_len*k_len,
 		.max_sched_size = max_sched_size,
-		.interval_m = interval_mn,
-		.interval_k = interval_k,
+		.interval_mn = interval_mn,
+		.interval_mn_slice = unit_len*interval_mn,
 	}
 }
 
