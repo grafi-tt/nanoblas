@@ -1,0 +1,4 @@
+set(SRCS ${SRCS}
+	${CMAKE_CURRENT_SOURCE_DIR}/param_fxx.c
+	PARENT_SCOPE
+)

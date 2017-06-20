@@ -18,11 +18,13 @@ typedef void nanoblas_f64_kernel_fun_t(nanoblas_f64_kernel_state_t *, nanoblas_f
 
 typedef struct nanoblas_f32_kernel_t {
 	nanoblas_f32_kernel_fun_t *fun;
-	int unit_len;
+	int m_slice_len;
+	int n_slice_len;
 } nanoblas_f32_kernel_t;
 typedef struct nanoblas_f64_kernel_t {
 	nanoblas_f64_kernel_fun_t *fun;
-	int unit_len;
+	int m_slice_len;
+	int n_slice_len;
 } nanoblas_f64_kernel_t;
 
 #endif
