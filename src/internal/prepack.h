@@ -32,6 +32,18 @@ static inline prepack_state_t prepack_state_new(
 	}
 }
 
+#define restart_prepack JOIN(NAMESPACE, PREFIX, start_prepack)
+static inline void restart_prepack(prepack_state_t *st,
+		const FTYPE *next, int mn_len, int k_len, int max_sched_size) {
+	st->next_cur = next;
+	st->next_cur_bak = next;
+	st->mn_len_remained = mn_len;
+	st->mn_len_real = imin(st->mn_slice_len_virtual, st->mn_len_remained):
+	st->slice_size = st->mn_slice_len_virtual*k_len;
+	st->max_sched_size = max_sched_size;
+	st->sched_size = imin(st->max_sched_size, st->slice_size);
+}
+
 #define step_prepack JOIN(NAMESPACE, PREFIX, step_prepack)
 void step_prepack(prepack_state_t *st);
 

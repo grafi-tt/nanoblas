@@ -58,72 +58,54 @@ void gemm_do(const nanoblas_t *nb,
 	iter_t *const n_it2 = &it2.iters[0], *const k_it2 = &it2.iters[1];
 
 	/* first packing */
+	kernel_state_t kernel_st = {
+		.a_pack_cur = a_pack_next,
+		.b_pack_cur = b_pack_next,
+		.ldc = ldc,
+		.k_len = k_len,
+	};
+
 	prepack_state_t *current_prepack_st_p = NULL;
-	FTYPE *a_pack_cur = a_pack;
-	FTYPE *b_pack_cur = b_pack;
-	prepack_state_t a_prepack_st = {
-		.next_cur = A,
-		.next_pack_cur = a_next_pack,
-		.k_next_len = k_it3->len,
-		.mn_next_len = m_it3->len,
-		.interval_k = interval_k_in_a,
-		.interval_mn = interval_m,
-		.unit_len = unit_len,
-	};
-	prepack_state_t b_prepack_st = {
-		.next_cur = B,
-		.next_pack_cur = b_next_pack,
-		.k_next_len = k_it2->len,
-		.mn_next_len = n_it2->len,
-		.interval_k = interval_k_in_b,
-		.interval_mn = interval_n,
-		.unit_len = unit_len,
-	};
-	start_prepack(&a_prepack_st);
-	start_prepack(&b_prepack_st);
+	prepack_state_t b_prepack_st = prepack_state_new(
+			B, b_pack, n_it2->len, k_it2->len, unit_len, k_it2->len, interval_n, interval_k_in_b);
+	prepack_state_t a_prepack_st = prepack_state_new(
+			A, a_pack, M, k_it2->len, unit_len, k_it2->len, interval_m, interval_k_in_a);
 
 	do {
-		const int m_len = m_it3->len;
-		const int n_len = n_it3->len;
-		const int k_len = k_it3->len;
-		const size_t m_pos = m_it3->pos;
-		const size_t n_pos = n_it3->pos;
-		const size_t m_end = m_it3->pos + m_len;
-		const size_t n_end = n_it3->pos + n_len;
+		kernel_st.c_cur = C + n_it2->cur;
 
-		if (m_it3->pos == 0) {
-			if (b_prepack_st.mn_sched_len != 0) {
-				pack_all(&b_prepack_st);
-			}
-			nest_next(&it2);
-			if (!it2.is_end) {
-				fswap(&b_pack, &b_next_pack);
-				b_pack_cur = b_pack;
-				b_prepack_st.next_cur =  B + interval_k_in_b*k_it2->pos + interval_n*n_it2->pos,
-				b_prepack_st.next_pack_cur = b_next_pack,
-				b_prepack_st.mn_packed_len = 0;
-				b_prepack_st.k_packed_len = 0;
-				b_prepack_st.mn_next_len = n_it2->len,
-				b_prepack_st.k_next_len = k_it2->len,
-				start_prepack(&b_prepack_st);
-			}
+		if (b_prepack_st.mn_sched_len != 0) {
+			pack_all(&b_prepack_st);
+		}
+		kernel_st.b_pack_cur       = b_pack_next;
+		b_prepack_st.next_pack_cur = b_pack;
+		b_pack      = kernel_st.b_pack_cur;
+		b_pack_next = b_prepack_st.next_pack_cur;
+
+		nest_next(&it2);
+		if (!it2.is_end) {
+			restart_prepack(&b_prepack_st,
+					B + interval_k_in_b*k_it2->pos + interval_n*n_it2->pos, n_it2->len, k_it2->len, k_it2->len);
 		}
 
-		if (a_prepack_st.mn_sched_len != 0) {
-			pack_all(&a_prepack_st);
-		}
-		kernel_state_t kernel_st = {
-			.a_pack_cur = a_pack_cur,
-			.b_pack_cur = b_pack_cur,
-			.ldc = ldc,
-			.k_len = k_len,
-		};
-
-		int m_slice_next_len;
 		do {
-			kernel_st.c_cur = C + ldc*m_cur + n_cur;
-			kernel_st.m_slice_len = m_slice_next_len;
-			m_slice_next_len = a_prepack_st->mn_slice_real_len;
+			if (current_prepack_st_p == &a_prepack_st) {
+				pack_slice(&a_prepack_st);
+			}
+			kernel_st.a_pack_cur       = a_pack_next;
+			a_prepack_st.next_pack_cur = a_pack;
+			a_pack      = kernel_st.a_pack_cur;
+			a_pack_next = a_prepack_st.next_pack_cur;
+			current_prepack_st_p = &a_prepack_st;
+
+			if (!a_prepack_st.mn_len_remained) {
+				if (it2.is_end) {
+					current_prepack_st_p = NULL;
+				} else {
+					restart_prepack(&a_prepack_st,
+							A + interval_k_in_a*k_it2->pos, M, k_it2->len, k_it2->len);
+				}
+			}
 
 			for (size_t n_cur = n_pos; n_cur < n_end; n_cur += unit_len) {
 				kernel_st.n_sub_len = imin(unit_len, n_end - n_cur);
@@ -133,27 +115,6 @@ void gemm_do(const nanoblas_t *nb,
 					if (s) {
 						current_prepack_st_p = b_prepack_st.mn_len_remained ? b_prepack_st : NULL;
 					}
-				}
-			}
-
-			if (current_prepack_st_p == &a_prepack_st) {
-				pack_slice(&a_prepack_st);
-			}
-			pack_cur = pack2;
-			a_prepack_st.next_pack_cur = pack1;
-			pack1 = pack_cur;
-			pack2 = a_prepack_st.next_pack_cur;
-			current_prepack_st_p = &a_prepack_st;
-
-			if (!a_prepack_st.mn_len_remained) {
-				nest_next(&it2);
-				if it2.is_end {
-					current_prepack_st_p = NULL;
-				} else {
-					a_prepack_st.next_cur = A + interval_k_in_a*k_it2->pos;
-					a_prepack_mn_len_remained = M;
-					a_prepack_st.max_sched_size = k_it2->len;
-					restart_prepack(&a_prepack_st);
 				}
 			}
 		} while (m_slice_next_len);
