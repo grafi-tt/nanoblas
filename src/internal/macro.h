@@ -29,13 +29,29 @@
 #define blk_k_len JOIN(PREFIX, blk_k_len)
 
 /* join */
-#define JOIN(...) JOIN_HELPER_1(__VA_ARGS__, ARITY_4, ARITY_3, ARITY_2, dummy)
-#define JOIN_HELPER_1(v1, v2, v3, v4, arity, ...) JOIN_HELPER_2(v1, v2, v3, v4, arity)
-#define JOIN_HELPER_2(v1, v2, v3, v4, arity)      JOIN_##arity(v1, v2, v3, v4)
+#define JOIN(...) \
+	JOIN_HELPER_1(__VA_ARGS__, ARITY_9, ARITY_8, ARITY_7, ARITY_6, ARITY_5, ARITY_4, ARITY_3, ARITY_2, dummy)
+#define JOIN_HELPER_1(v1, v2, v3, v4, v5, v6, v7, v8, v9, arity, ...) \
+	JOIN_HELPER_2(v1, v2, v3, v4, v5, v6, v7, v8, v9, arity)
+#define JOIN_HELPER_2(v1, v2, v3, v4, v5, v6, v7, v8, v9 arity) \
+	JOIN_##arity(v1, v2, v3, v4, v5, v6, v7, v8, v9)
 
-#define JOIN_ARITY_4(v1, v2, v3, v4)  JOIN_OP_1(JOIN_ARITY_3(v1, v2, v3, dummy), v4)
-#define JOIN_ARITY_3(v1, v2, v3, ...) JOIN_OP_1(JOIN_ARITY_2(v1, v2, dummy), v3)
-#define JOIN_ARITY_2(v1, v2, ...)     JOIN_OP_1(v1, v2)
+#define JOIN_ARITY_9(v1, v2, v3, v4, v5, v6, v7, v8, v9) \
+	JOIN_OP_1(v1, JOIN_ARITY_8(v2, v3, v4, v5, v6, v7, v8, v9, dummy))
+#define JOIN_ARITY_8(v1, v2, v3, v4, v5, v6, v7, v8, ...) \
+	JOIN_OP_1(v1, JOIN_ARITY_7(v2, v3, v4, v5, v6, v7, v8, dummy))
+#define JOIN_ARITY_7(v1, v2, v3, v4, v5, v6, v7, ...) \
+	JOIN_OP_1(v1, JOIN_ARITY_6(v2, v3, v4, v5, v6, v7, dummy))
+#define JOIN_ARITY_6(v1, v2, v3, v4, v5, v6, ...) \
+	JOIN_OP_1(v1, JOIN_ARITY_5(v2, v3, v4, v5, v6, dummy))
+#define JOIN_ARITY_5(v1, v2, v3, v4, v5, ...) \
+	JOIN_OP_1(v1, JOIN_ARITY_4(v2, v3, v4, v5, dummy))
+#define JOIN_ARITY_4(v1, v2, v3, v4, ...) \
+	JOIN_OP_1(v1, JOIN_ARITY_3(v2, v3, v4, dummy))
+#define JOIN_ARITY_3(v1, v2, v3, ...) \
+	JOIN_OP_1(v1, JOIN_ARITY_2(v2, v3, dummy))
+#define JOIN_ARITY_2(v1, v2, ...) \
+	JOIN_OP_1(v1, v2)
 
 #define JOIN_OP_1(v1, v2) JOIN_OP_2(v1, v2)
 #define JOIN_OP_2(v1, v2) v1##v2
