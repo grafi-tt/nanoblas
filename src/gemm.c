@@ -90,13 +90,15 @@ void gemm(const nanoblas_t *nb,
 		kernel_st.b_pack_cur       = b_pack;
 		b_prepack_st.next_pack_cur = b_next_pack;
 
+		int m_slice_next_len = a_prepack_st.mn_slice_len_real;
+		FTYPE *c_next_cur =  C + n_it2->pos;
+
 		nest_next(it2);
 		if (!it2->is_end) {
 			restart_prepack(&b_prepack_st,
 					B + interval_k_in_b*k_it2->pos + interval_n*n_it2->pos, n_it2->len, k_it2->len, k_it2->len);
 		}
 
-		int m_slice_next_len = a_prepack_st.mn_slice_len_real;
 		do {
 			if (current_prepack_st_p == &a_prepack_st) {
 				pack_slice(&a_prepack_st);
@@ -108,6 +110,9 @@ void gemm(const nanoblas_t *nb,
 			kernel_st.m_slice_len = m_slice_next_len;
 			m_slice_next_len = a_prepack_st.mn_slice_len_real;
 
+			kernel_st.c_cur = c_next_cur;
+			c_next_cur = kernel_st.c_cur + m_slice_len*ldc;
+
 			if (m_slice_next_len == 0) {
 				if (it2->is_end) {
 					current_prepack_st_p = NULL;
@@ -115,7 +120,16 @@ void gemm(const nanoblas_t *nb,
 					restart_prepack(&a_prepack_st,
 							A + interval_k_in_a*k_it2->pos, M, k_it2->len, k_it2->len);
 				}
+				c_next_cur = C + n_it2->pos;
 			}
+
+#ifdef HAS_BUILTIN_PREFETCH
+			FTYPE *c_next_cur_tmp = c_next_cur;
+			for (int i = 0; i < m_slice_len; i++) {
+				__builtin_prefetch(c_next_cur_tmp, 1, 0);
+				c_next_cur_tmp += ldc;
+			}
+#endif
 
 			size_t n_pos = n_it2->pos;
 			size_t n_end = n_it2->pos + n_it2->len;
