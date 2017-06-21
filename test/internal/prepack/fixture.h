@@ -2,18 +2,17 @@
 
 /* s1 */
 FTYPE s1_mtx[64*100];
-void init_s1_mtx() {
+FTYPE s1_mtx_pack[64*64];
+FTYPE s1_mtx_pack_ans[64*64];
+
+prepack_state_t init_s1() {
 	int v = 0;
 	for (int i = 0; i < 64; i++) {
 		for (int j = 0; j < 64; j++) {
 			s1_mtx[100*i+j] = v++;
 		}
 	}
-}
 
-FTYPE s1_mtx_pack[64*64];
-FTYPE s1_mtx_pack_ans[64*64];
-void init_s1_mtx_pack_ans() {
 	int l = 0;
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 64; j++) {
@@ -22,21 +21,16 @@ void init_s1_mtx_pack_ans() {
 			}
 		}
 	}
+
+	return prepack_state_new(s1_mtx, s1_mtx_pack, 64, 64, 8, 64, 1, 100);
 }
 
-prepack_state_t s1 = {
-	.next_cur = s1_mtx,
-	.next_pack_cur = s1_mtx_pack,
-	.mn_next_len = 64,
-	.k_next_len = 64,
-	.interval_mn = 1,
-	.interval_k = 100,
-	.unit_len = 8,
-};
-
 /* s2 */
-static FTYPE s2_mtx[64*100];
-void init_s2_mtx() {
+FTYPE s2_mtx[64*100];
+FTYPE s2_mtx_pack[64*42];
+FTYPE s2_mtx_pack_ans[64*42];
+
+prepack_state_t init_s2() {
 	int v = 0;
 	for (int i = 0; i < 63; i++) {
 		for (int j = 0; j < 42; j++) {
@@ -46,11 +40,7 @@ void init_s2_mtx() {
 	for (int j = 0; j < 42; j++) {
 		s2_mtx[6300+j] = 7777;
 	}
-}
 
-FTYPE s2_mtx_pack[64*42];
-FTYPE s2_mtx_pack_ans[64*42];
-void init_s2_mtx_pack_ans() {
 	int l = 0;
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 42; j++) {
@@ -59,8 +49,11 @@ void init_s2_mtx_pack_ans() {
 			}
 		}
 	}
+
+	return prepack_state_new(s2_mtx, s2_mtx_pack, 63, 42, 8, 128, 100, 1);
 }
 
+/*
 prepack_state_t s2 = {
 	.next_cur = s2_mtx,
 	.next_pack_cur = s2_mtx_pack,
@@ -70,8 +63,10 @@ prepack_state_t s2 = {
 	.interval_k = 1,
 	.unit_len = 8,
 };
+*/
 
 /* s3 */
+/*
 FTYPE s3_mtx[15*100];
 void init_s3_mtx() {
 	int v = 0;
@@ -102,3 +97,4 @@ prepack_state_t s3 = {
 	.interval_k = 100,
 	.unit_len = 8,
 };
+*/
