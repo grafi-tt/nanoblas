@@ -56,8 +56,8 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 		*next_pack_cur++ = v;
 		next_cur += interval_mn;
 		int moving_up = mn_slice_pos++ == mn_slice_len_virtual;
-		moving_up = -moving_up
-		a_next_cur += proceed_k & moving_up;
+		moving_up = -moving_up;
+		next_cur += proceed_k & moving_up;
 		/* ANDN instruction would be used on Haswell/Piledriver or newer*/
 		mn_slice_pos &= ~moving_up;
 	} while (--sched_size);
@@ -84,8 +84,8 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 	loop_end:
 
 	/* store c */
-	for (int i = 0; i < kernel_st->m_sub_len; i++) {
-		for (int j = 0; j < kernel_st->n_sub_len; j++) {
+	for (int i = 0; i < kernel_st->m_slice_len; i++) {
+		for (int j = 0; j < kernel_st->n_slice_len; j++) {
 			c_cur[j] = c_buf_cur[j];
 		}
 		c_buf_cur += N_SLICE_LEN;
@@ -99,4 +99,4 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 }
 
 #define generic_kernel JOIN(NAMESPACE, PREFIX, generic_kernel_, SLICE_M_LEN, x, SLICE_N_LEN)
-kernel_t generic_kernel = { &generic_kernel_fun, SLICE_LEN, SLICE_LEN };
+kernel_t generic_kernel = { &generic_kernel_fun, M_SLICE_LEN, N_SLICE_LEN };

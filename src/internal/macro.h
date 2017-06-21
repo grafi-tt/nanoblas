@@ -16,24 +16,12 @@
 #define SIGN d
 #endif
 
-/* types */
-#define kernel_t         JOIN(NAMESPACE, PREFIX, kernel_t)
-#define kernel_fun_t     JOIN(NAMESPACE, PREFIX, kernel_fun_t)
-#define kernel_state_t   JOIN(NAMESPACE, PREFIX, kernel_state_t)
-#define prepack_state_t  JOIN(NAMESPACE, PREFIX, prepack_state_t)
-
-/* members of nanoblas_t */
-#define kernel    JOIN(PREFIX, kernel)
-#define blk_m_len JOIN(PREFIX, blk_m_len)
-#define blk_n_len JOIN(PREFIX, blk_n_len)
-#define blk_k_len JOIN(PREFIX, blk_k_len)
-
 /* join */
 #define JOIN(...) \
 	JOIN_HELPER_1(__VA_ARGS__, ARITY_9, ARITY_8, ARITY_7, ARITY_6, ARITY_5, ARITY_4, ARITY_3, ARITY_2, dummy)
 #define JOIN_HELPER_1(v1, v2, v3, v4, v5, v6, v7, v8, v9, arity, ...) \
 	JOIN_HELPER_2(v1, v2, v3, v4, v5, v6, v7, v8, v9, arity)
-#define JOIN_HELPER_2(v1, v2, v3, v4, v5, v6, v7, v8, v9 arity) \
+#define JOIN_HELPER_2(v1, v2, v3, v4, v5, v6, v7, v8, v9, arity) \
 	JOIN_##arity(v1, v2, v3, v4, v5, v6, v7, v8, v9)
 
 #define JOIN_ARITY_9(v1, v2, v3, v4, v5, v6, v7, v8, v9) \
@@ -57,3 +45,14 @@
 #define JOIN_OP_2(v1, v2) v1##v2
 
 #endif
+
+/* types */
+#define kernel_t         JOIN(NAMESPACE, PREFIX, kernel_t)
+#define kernel_fun_t     JOIN(NAMESPACE, PREFIX, kernel_fun_t)
+#define kernel_state_t   JOIN(NAMESPACE, PREFIX, kernel_state_t)
+#define prepack_state_t  JOIN(NAMESPACE, PREFIX, prepack_state_t)
+
+/* members of nanoblas_t */
+#define kernel    JOIN(PREFIX, kernel)
+#define blk_n_max_len JOIN(PREFIX, blk_n_max_len)
+#define blk_k_max_len JOIN(PREFIX, blk_k_max_len)
