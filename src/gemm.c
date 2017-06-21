@@ -1,3 +1,8 @@
+/**
+ * \file
+ * \brief Implementation of GEMM
+ */
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "nanoblas.h"
@@ -9,6 +14,9 @@
 #include "internal/util.h"
 
 #define gemm JOIN(NAMESPACE, SIGN, gemm)
+/**
+ * \brief gemm
+ */
 void gemm(const nanoblas_t *nb,
 		enum CBLAS_ORDER Order, enum CBLAS_TRANSPOSE TransA, enum CBLAS_TRANSPOSE TransB,
 		size_t M, size_t N, size_t K,
