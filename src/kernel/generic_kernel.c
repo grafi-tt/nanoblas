@@ -12,8 +12,8 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 	FTYPE *restrict c_cur = kernel_st->c_cur;
 
 	/* load c */
-	for (int i = 0; i < M_SLICE_LEN; i++) {
-		for (int j = 0; j < N_SLICE_LEN; j++) {
+	for (int i = 0; i < kernel_st->m_slice_real_len; i++) {
+		for (int j = 0; j < kernel_st->n_slice_real_len; j++) {
 			c_buf_cur[j] = c_cur[j];
 		}
 		c_buf_cur += N_SLICE_LEN;
@@ -33,10 +33,10 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 
 	int mn_slice_pos = prepack_st->mn_slice_pos;
 	int sched_size   = prepack_st->sched_size;
-	const int mn_slice_real_len    = prepack_st->mn_slice_real_len;
-	const int mn_slice_virtual_len = prepack_st->mn_slice_virtual_len;
-	const ptrdiff_t interval_mn    = prepack_st->interval_mn;
-	const ptrdiff_t proceed_k      = prepack_st->proceed_k;
+	const int mn_slice_real_len  = prepack_st->mn_slice_real_len;
+	const int mn_slice_len       = prepack_st->mn_slice_len;
+	const ptrdiff_t interval_mn  = prepack_st->interval_mn;
+	const ptrdiff_t proceed_k    = prepack_st->proceed_k;
 
 	k_len -= sched_size;
 
@@ -55,7 +55,7 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 		FTYPE v = (mn_slice_pos < mn_slice_real_len) ? *next_cur : 0;
 		*next_pack_cur++ = v;
 		next_cur += interval_mn;
-		int moving_up = mn_slice_pos++ == mn_slice_virtual_len;
+		int moving_up = mn_slice_pos++ == mn_slice_len;
 		moving_up = -moving_up;
 		next_cur += proceed_k & moving_up;
 		/* ANDN instruction would be used on Haswell/Piledriver or newer*/
@@ -84,8 +84,8 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 	loop_end:
 
 	/* store c */
-	for (int i = 0; i < kernel_st->m_slice_len; i++) {
-		for (int j = 0; j < kernel_st->n_slice_len; j++) {
+	for (int i = 0; i < kernel_st->m_slice_real_len; i++) {
+		for (int j = 0; j < kernel_st->n_slice_real_len; j++) {
 			c_cur[j] = c_buf_cur[j];
 		}
 		c_buf_cur += N_SLICE_LEN;
