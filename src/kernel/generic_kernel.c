@@ -6,15 +6,17 @@
 #define generic_kernel_fun JOIN(NAMESPACE, PREFIX, generic_kernel_fun_, M_SLICE_LEN, x, N_SLICE_LEN)
 __attribute__((optimize("unroll-loops")))
 void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) {
-
 	FTYPE c_buf[M_SLICE_LEN*N_SLICE_LEN];
 	FTYPE *restrict c_buf_cur = c_buf;
 	FTYPE *restrict c_cur = kernel_st->c_cur;
 
+	const int m_slice_real_len = kernel_st->m_slice_real_len;
+	const int n_slice_real_len = kernel_st->n_slice_real_len;
+
 	/* load c */
-	for (int i = 0; i < kernel_st->m_slice_real_len; i++) {
-		for (int j = 0; j < kernel_st->n_slice_real_len; j++) {
-			c_buf_cur[j] = c_cur[j];
+	for (int i = 0; i < M_SLICE_LEN; i++) {
+		for (int j = 0; j < N_SLICE_LEN; j++) {
+			c_buf_cur[j] = i < m_slice_real_len && j < n_slice_real_len ? c_cur[j] : 0;
 		}
 		c_buf_cur += N_SLICE_LEN;
 		c_cur += kernel_st->ldc;
@@ -55,7 +57,7 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 		FTYPE v = (mn_slice_pos < mn_slice_real_len) ? *next_cur : 0;
 		*next_pack_cur++ = v;
 		next_cur += interval_mn;
-		int moving_up = mn_slice_pos++ == mn_slice_len;
+		int moving_up = ++mn_slice_pos == mn_slice_len;
 		moving_up = -moving_up;
 		next_cur += proceed_k & moving_up;
 		/* ANDN instruction would be used on Haswell/Piledriver or newer*/
@@ -84,9 +86,11 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 	loop_end:
 
 	/* store c */
-	for (int i = 0; i < kernel_st->m_slice_real_len; i++) {
-		for (int j = 0; j < kernel_st->n_slice_real_len; j++) {
-			c_cur[j] = c_buf_cur[j];
+	for (int i = 0; i < M_SLICE_LEN; i++) {
+		for (int j = 0; j < N_SLICE_LEN; j++) {
+			if (i < m_slice_real_len && j < n_slice_real_len) {
+				c_cur[j] = c_buf_cur[j];
+			}
 		}
 		c_buf_cur += N_SLICE_LEN;
 		c_cur += kernel_st->ldc;

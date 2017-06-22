@@ -4,7 +4,6 @@
  */
 
 #include <stdint.h>
-#include <stdio.h>
 #include "nanoblas.h"
 #include "nanoblas_kernel.h"
 #include "nanoblas_prepack.h"
@@ -111,12 +110,13 @@ static void kernel_loop(gemm_state_t *st) {
 	}
 #endif
 
+	size_t n_end = st->n_it->pos;
+	if (n_end == 0) n_end = st->n_it->sum;
 	const int n_slice_len = st->b_prepack_st.mn_slice_len;
-	for (size_t n_cur = st->n_pos; n_cur < st->n_it->pos; n_cur += n_slice_len) {
-		printf("kernel\n");
-
-		st->kernel_st.n_slice_real_len = imin(n_slice_len, (int)(st->n_it->pos - n_cur));
+	for (size_t n_cur = st->n_pos; n_cur < n_end; n_cur += n_slice_len) {
+		st->kernel_st.n_slice_real_len = imin(n_slice_len, (int)(n_end - n_cur));
 		st->kernel_fun(&st->kernel_st, st->current_prepack_st_p);
+		st->kernel_st.a_pack_cur = st->a_pack;
 
 		if (st->current_prepack_st_p) {
 			if (step_prepack(st->current_prepack_st_p)) {
@@ -132,6 +132,7 @@ static void kernel_loop(gemm_state_t *st) {
 			}
 		}
 	}
+	st->kernel_st.b_pack_cur = st->b_pack;
 }
 
 /**
@@ -164,7 +165,6 @@ void gemm(const nanoblas_t *nb,
 	const int m_slice_len = kernel.m_slice_len;
 	const int n_slice_len = kernel.n_slice_len;
 	kernel_fun_t *const kernel_fun = kernel.fun;
-	printf("%d %d\n", m_slice_len, n_slice_len);
 
 	/* get block size */
 	const size_t blk_n_max_len = nb->blk_n_max_len;
@@ -180,10 +180,10 @@ void gemm(const nanoblas_t *nb,
 	FTYPE *b_next_pack = mem_aligned + 2*m_slice_len*blk_k_max_len + blk_n_max_len*blk_k_max_len;
 
 	/* get interval */
-	const ptrdiff_t interval_m = TransA ? 1 : lda;
-	const ptrdiff_t interval_k_in_a = TransA ? lda : 1;
-	const ptrdiff_t interval_k_in_b = TransB ? 1 : ldb;
-	const ptrdiff_t interval_n = TransB ? ldb : 1;
+	const ptrdiff_t interval_m      = TransA == CblasNoTrans ? lda : 1;
+	const ptrdiff_t interval_k_in_a = TransA == CblasNoTrans ? 1 : lda;
+	const ptrdiff_t interval_k_in_b = TransB == CblasNoTrans ? ldb : 1;
+	const ptrdiff_t interval_n      = TransB == CblasNoTrans ? 1 : ldb;
 
 	/* get iterator */
 	circular_iter_t m_it = simple_iter(M, m_slice_len);
@@ -193,7 +193,7 @@ void gemm(const nanoblas_t *nb,
 	gemm_state_t st = {
 		/* .A_pos, */
 		.A_next_k = A,
-		/* .B_next_k, */
+		.B_next_k = B,
 		.C = C,
 		.C_next = C,
 		.interval_k_in_a = interval_k_in_a,
@@ -227,17 +227,14 @@ void gemm(const nanoblas_t *nb,
 	};
 
 	do {
-		printf("k\n");
 		before_k_step(&st);
 		next(&k_it);
 		do {
-			printf("n\n");
 			before_n_step(&st);
 			next(&n_it);
 			n_step(&st);
 			if (n_it.pos == 0) last_n_step_before_k(&st);
 			do {
-				printf("m\n");
 				before_m_step(&st);
 				next(&m_it);
 				m_step(&st);

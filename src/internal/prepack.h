@@ -69,20 +69,18 @@ static inline void pack_all(prepack_state_t *st) {
 
 	do {
 		do {
-			FTYPE v = (st->mn_slice_pos++ < st->mn_slice_real_len) ? *st->next_cur : 0;
-			*st->next_pack_cur++ = v;
-			st->next_cur += st->interval_mn;
+			FTYPE v = (st->mn_slice_pos++ < st->mn_slice_real_len) ? *next_cur : 0;
+			*next_pack_cur++ = v;
+			next_cur += st->interval_mn;
 			st->packed_size++;
 		} while (st->mn_slice_pos < st->mn_slice_len);
 		st->mn_slice_pos = 0;
-		st->next_cur += st->proceed_k;
+		next_cur += st->proceed_k;
 	} while (st->packed_size < st->size);
 	st->next_cur = st->next_bak + st->interval_mn * st->mn_slice_len;
 	st->next_bak = st->next_cur;
 	st->packed_size = 0;
 	st->sched_size = st->max_sched_size;
-
-	st->next_cur = next_cur;
 	st->next_pack_cur = next_pack_cur;
 }
 

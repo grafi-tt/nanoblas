@@ -11,6 +11,7 @@ circular_iter_t blk_spec_iter(size_t sum, int max_len, int slice_len) {
 	size_t rem = sum % max_len;
 	if (rem == 0) {
 		it.len = max_len;
+		it.base_len = max_len;
 		it.dec_pos = sum;
 	} else {
 		num++;
