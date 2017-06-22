@@ -19,8 +19,8 @@ static inline prepack_state_t prepack_state_new(
 		.next_pack_cur        = next_pack,
 		.mn_slice_pos         = 0,
 		.sched_size           = imin(max_sched_size, slice_len*k_len),
-		.mn_slice_len_real    = imin(slice_len, mn_len),
-		.mn_slice_len_virtual = slice_len,
+		.mn_slice_real_len    = imin(slice_len, mn_len),
+		.mn_slice_virtual_len = slice_len,
 		.interval_mn          = interval_mn,
 		.proceed_k            = interval_k - slice_len*interval_mn,
 		.next_cur_bak         = next,
@@ -33,14 +33,20 @@ static inline prepack_state_t prepack_state_new(
 	return st;
 }
 
+#define advance_prepack JOIN(NAMESPACE, PREFIX, restart_prepack_light)
+static inline void advance_prepack(prepack_state_t *st,
+		const FTYPE *next, int mn_slice_real_len) {
+	st->next = next;
+	st->mn_slice_real_len = mn_slice_real_len;
+}
+
 #define restart_prepack JOIN(NAMESPACE, PREFIX, start_prepack)
 static inline void restart_prepack(prepack_state_t *st,
-		const FTYPE *next, int mn_len, int k_len, int max_sched_size) {
-	st->next_cur = next;
-	st->next_cur_bak = next;
-	st->mn_len_remained = mn_len;
-	st->mn_slice_len_real = imin(st->mn_slice_len_virtual, st->mn_len_remained);
-	st->slice_size = st->mn_slice_len_virtual*k_len;
+		const FTYPE *next, int mn_slic_real_len, int k_len, int max_sched_size) {
+	st->next = next;
+	st->mn_slice_real_len = mn_slice_real_len;
+	restart_prepack_light(st, next, mn_slice_real_len);
+	st->slice_size = st->mn_slice_virtual_len*k_len;
 	st->max_sched_size = max_sched_size;
 	st->sched_size = imin(st->max_sched_size, st->slice_size);
 }

@@ -13,12 +13,6 @@ typedef struct {
 	size_t dec_pos;
 } iter_t;
 
-typedef struct {
-	int depth;
-	int is_end;
-	iter_t iters[];
-} nest_iter_t;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,10 +21,18 @@ extern "C" {
 void iter_by_blk_spec(size_t len, int max_len, int slice_len, iter_t *it);
 
 #define next JOIN(NAMESPACE, next)
-void next(iter_t *it);
-
-#define nest_next JOIN(NAMESPACE, nest_next)
-void nest_next(nest_iter_t *nit);
+void next(iter_t *it) {
+	it->pos += it->len;
+	if (it->pos == it->dec_pos)
+		it->len -= it->slice_len;
+	size_t distance = it->sum - it->pos;
+	if (distance == 0) {
+		it->pos = 0;
+		it->len = it->base_len;
+	} else if (distance < (size_t)it->len) {
+		it->len = distance;
+	}
+}
 
 #ifdef __cplusplus
 }

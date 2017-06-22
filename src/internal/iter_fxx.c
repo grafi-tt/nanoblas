@@ -30,22 +30,3 @@ void init_iter_by_blk_spec(size_t sum, int max_len, int slice_len, iter_t *it) {
 	it->len = len;
 	it->base_len = len;
 }
-
-void next(iter_t *it) {
-	it->pos += it->len;
-	if (it->pos == it->dec_pos)
-		it->len -= it->slice_len;
-	if (it->sum - it->pos < (size_t)it->len)
-		it->len = it->sum - it->pos;
-}
-
-void nest_next(nest_iter_t *nit) {
-	for (int d = 0; d < nit->depth; d++) {
-		iter_t *it = &nit->iters[d];
-		next(it);
-		if (it->pos < it->sum) return;
-		it->pos = 0;
-		it->len = it->base_len;
-	}
-	nit->is_end = 1;
-}

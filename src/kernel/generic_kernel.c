@@ -33,8 +33,8 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 
 	int mn_slice_pos = prepack_st->mn_slice_pos;
 	int sched_size   = prepack_st->sched_size;
-	const int mn_slice_len_real    = prepack_st->mn_slice_len_real;
-	const int mn_slice_len_virtual = prepack_st->mn_slice_len_virtual;
+	const int mn_slice_real_len    = prepack_st->mn_slice_real_len;
+	const int mn_slice_virtual_len = prepack_st->mn_slice_virtual_len;
 	const ptrdiff_t interval_mn    = prepack_st->interval_mn;
 	const ptrdiff_t proceed_k      = prepack_st->proceed_k;
 
@@ -52,10 +52,10 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 		a_pack_cur += M_SLICE_LEN;
 		b_pack_cur += N_SLICE_LEN;
 		/* pack */
-		FTYPE v = (mn_slice_pos < mn_slice_len_real) ? *next_cur : 0;
+		FTYPE v = (mn_slice_pos < mn_slice_real_len) ? *next_cur : 0;
 		*next_pack_cur++ = v;
 		next_cur += interval_mn;
-		int moving_up = mn_slice_pos++ == mn_slice_len_virtual;
+		int moving_up = mn_slice_pos++ == mn_slice_virtual_len;
 		moving_up = -moving_up;
 		next_cur += proceed_k & moving_up;
 		/* ANDN instruction would be used on Haswell/Piledriver or newer*/
