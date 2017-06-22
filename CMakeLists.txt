@@ -21,6 +21,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/detect_arch.cmake)
 add_subdirectory(src)
 
 foreach(s IN LISTS SRCS)
+	message(${s})
 	if (${s} MATCHES "_f32")
 		set(SRCS_F32 ${SRCS_F32} ${s})
 	elseif(${s} MATCHES "_f64")

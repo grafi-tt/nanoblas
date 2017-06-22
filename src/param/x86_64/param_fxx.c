@@ -19,8 +19,8 @@ static void cpuid(int *eax, int *ebx, int *ecx, int *edx) {
 }
 
 void nanoblas_init(nanoblas_t *nb) {
-	nb->f32_kernel = f32_generic_kernel_6x4;
-	nb->f64_kernel = f64_generic_kernel_4x4;
+	nb->f32_kernel = nanoblas_f32_generic_kernel_6x4;
+	nb->f64_kernel = nanoblas_f64_generic_kernel_4x4;
 
 	nb->f32_blk_n_max_len = 128;
 	nb->f32_blk_k_max_len = 128;
@@ -39,7 +39,7 @@ void nanoblas_init(nanoblas_t *nb) {
 	if (!(edx && (1<<26))) return;
 	/* check avx */
 	if (!(ecx && (1<<28))) return;
-	nb->f32_kernel = f32_avx_kernel;
+	nb->f32_kernel = nanoblas_f32_avx_kernel;
 	/* check fma */
 	/* if (!(ecx && (1<<12))) return; */
 	/* kernel_cand = &fma_kernel; */

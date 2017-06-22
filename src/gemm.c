@@ -4,6 +4,7 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
 #include "nanoblas.h"
 #include "nanoblas_kernel.h"
 #include "nanoblas_prepack.h"
@@ -112,6 +113,7 @@ static void kernel_loop(gemm_state_t *st) {
 
 	const int n_slice_len = st->b_prepack_st.mn_slice_len;
 	for (size_t n_cur = st->n_pos; n_cur < st->n_it->pos; n_cur += n_slice_len) {
+		printf("kernel\n");
 
 		st->kernel_st.n_slice_real_len = imin(n_slice_len, (int)(st->n_it->pos - n_cur));
 		st->kernel_fun(&st->kernel_st, st->current_prepack_st_p);
@@ -162,6 +164,7 @@ void gemm(const nanoblas_t *nb,
 	const int m_slice_len = kernel.m_slice_len;
 	const int n_slice_len = kernel.n_slice_len;
 	kernel_fun_t *const kernel_fun = kernel.fun;
+	printf("%d %d\n", m_slice_len, n_slice_len);
 
 	/* get block size */
 	const size_t blk_n_max_len = nb->blk_n_max_len;
@@ -224,14 +227,17 @@ void gemm(const nanoblas_t *nb,
 	};
 
 	do {
+		printf("k\n");
 		before_k_step(&st);
 		next(&k_it);
 		do {
+			printf("n\n");
 			before_n_step(&st);
 			next(&n_it);
 			n_step(&st);
 			if (n_it.pos == 0) last_n_step_before_k(&st);
 			do {
+				printf("m\n");
 				before_m_step(&st);
 				next(&m_it);
 				m_step(&st);
