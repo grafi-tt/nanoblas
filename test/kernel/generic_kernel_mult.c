@@ -9,7 +9,7 @@
 #include "internal/macro.h"
 #include "internal/prepack.h"
 
-#define generic_kernel_8 JOIN(NAMESPACE, PREFIX, generic_kernel_8)
+#define generic_kernel_8 JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_8)
 
 static FTYPE a[8*64];
 static FTYPE b[8*64];

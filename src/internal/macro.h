@@ -24,7 +24,7 @@
 /**
  * @brief It will expand to `f32_` or `f64_`, depending on which of USE_F32 or USE_F64 is defined.
  */
-#define PREFIX
+#define FSIZE_PREFIX
 /**
  * @brief It will expand to `float` or `double`, depending on which of USE_F32 or USE_F64 is defined.
  */
@@ -35,18 +35,18 @@
 #define SIGN
 
 /** \cond MACRO_DETAIL */
-#undef PREFIX
+#undef FSIZE_PREFIX
 #undef FTYPE
 #undef SIGN
 
 #ifdef USE_F32
-#define PREFIX f32_
+#define FSIZE_PREFIX f32_
 #define FTYPE float
 #define SIGN s
 #endif
 
 #ifdef USE_F64
-#define PREFIX f64_
+#define FSIZE_PREFIX f64_
 #define FTYPE double
 #define SIGN d
 #endif
@@ -95,18 +95,18 @@
 /**
  * @name Type aliases
  * \{ */
-#define kernel_t         JOIN(NAMESPACE, PREFIX, kernel_t)
-#define kernel_fun_t     JOIN(NAMESPACE, PREFIX, kernel_fun_t)
-#define kernel_state_t   JOIN(NAMESPACE, PREFIX, kernel_state_t)
-#define prepack_state_t  JOIN(NAMESPACE, PREFIX, prepack_state_t)
+#define kernel_t         JOIN(NAMESPACE, FSIZE_PREFIX, kernel_t)
+#define kernel_fun_t     JOIN(NAMESPACE, FSIZE_PREFIX, kernel_fun_t)
+#define kernel_state_t   JOIN(NAMESPACE, FSIZE_PREFIX, kernel_state_t)
+#define prepack_state_t  JOIN(NAMESPACE, FSIZE_PREFIX, prepack_state_t)
 /** \} */
 
 /**
  * @name Member name aliases
  * \{ */
-#define kernel    JOIN(PREFIX, kernel)
-#define blk_n_max_len JOIN(PREFIX, blk_n_max_len)
-#define blk_k_max_len JOIN(PREFIX, blk_k_max_len)
+#define kernel    JOIN(FSIZE_PREFIX, kernel)
+#define blk_n_max_len JOIN(FSIZE_PREFIX, blk_n_max_len)
+#define blk_k_max_len JOIN(FSIZE_PREFIX, blk_k_max_len)
 /** \} */
 
 /** \}\} */

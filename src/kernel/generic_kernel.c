@@ -3,7 +3,7 @@
 #include "kernel/generic_kernel.h"
 #include "internal/macro.h"
 
-#define generic_kernel_fun JOIN(NAMESPACE, PREFIX, generic_kernel_fun_, M_SLICE_LEN, x, N_SLICE_LEN)
+#define generic_kernel_fun JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_fun_, M_SLICE_LEN, x, N_SLICE_LEN)
 __attribute__((optimize("unroll-loops")))
 void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) {
 	FTYPE c_buf[M_SLICE_LEN*N_SLICE_LEN];
@@ -102,5 +102,5 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 	kernel_st->c_cur += N_SLICE_LEN;
 }
 
-#define generic_kernel JOIN(NAMESPACE, PREFIX, generic_kernel_, M_SLICE_LEN, x, N_SLICE_LEN)
+#define generic_kernel JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_, M_SLICE_LEN, x, N_SLICE_LEN)
 kernel_t generic_kernel = { &generic_kernel_fun, M_SLICE_LEN, N_SLICE_LEN };

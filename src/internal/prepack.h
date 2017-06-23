@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#define step_prepack JOIN(NAMESPACE, PREFIX, step_prepack)
+#define step_prepack JOIN(NAMESPACE, FSIZE_PREFIX, step_prepack)
 static inline int step_prepack(prepack_state_t *st) {
 	st->packed_size += st->sched_size;
 	if (st->packed_size == st->size) {
@@ -24,12 +24,12 @@ static inline int step_prepack(prepack_state_t *st) {
 	}
 }
 
-#define limit_prepack JOIN(NAMESPACE, PREFIX, limit_prepack)
+#define limit_prepack JOIN(NAMESPACE, FSIZE_PREFIX, limit_prepack)
 static inline void limit_prepack(prepack_state_t *st, int mn_slice_real_len_limit) {
 	st->mn_slice_real_len = imin(st->mn_slice_len, mn_slice_real_len_limit);
 }
 
-#define restart_prepack JOIN(NAMESPACE, PREFIX, restart_prepack)
+#define restart_prepack JOIN(NAMESPACE, FSIZE_PREFIX, restart_prepack)
 static inline void restart_prepack(prepack_state_t *st,
 		const FTYPE *next, int mn_slice_real_len_limit) {
 	limit_prepack(st, mn_slice_real_len_limit);
@@ -37,7 +37,7 @@ static inline void restart_prepack(prepack_state_t *st,
 	st->next_bak = next;
 }
 
-#define reset_prepack JOIN(NAMESPACE, PREFIX, reset_prepack)
+#define reset_prepack JOIN(NAMESPACE, FSIZE_PREFIX, reset_prepack)
 static inline void reset_prepack(prepack_state_t *st,
 		const FTYPE *next, int mn_slice_real_len_limit, int k_len, int max_sched_size) {
 	restart_prepack(st, next, mn_slice_real_len_limit);
@@ -46,7 +46,7 @@ static inline void reset_prepack(prepack_state_t *st,
 	st->sched_size = imin(st->max_sched_size, st->size);
 }
 
-#define prepack_state_new JOIN(NAMESPACE, PREFIX, prepack_state_new)
+#define prepack_state_new JOIN(NAMESPACE, FSIZE_PREFIX, prepack_state_new)
 static inline prepack_state_t prepack_state_new(
 		const FTYPE *next, FTYPE *next_pack, int slice_len, int mn_slice_real_len_limit,
 		int k_len, int max_sched_size, ptrdiff_t interval_mn, ptrdiff_t interval_k) {
@@ -62,7 +62,7 @@ static inline prepack_state_t prepack_state_new(
 	return st;
 }
 
-#define pack_all JOIN(NAMESPACE, PREFIX, pack_all)
+#define pack_all JOIN(NAMESPACE, FSIZE_PREFIX, pack_all)
 static inline void pack_all(prepack_state_t *st) {
 	const FTYPE *restrict next_cur = st->next_cur;
 	FTYPE *restrict next_pack_cur = st->next_pack_cur;

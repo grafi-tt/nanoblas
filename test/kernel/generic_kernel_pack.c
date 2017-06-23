@@ -13,7 +13,7 @@
 
 #include "internal/prepack/fixture.h"
 
-#define generic_kernel_8 JOIN(NAMESPACE, PREFIX, generic_kernel_8)
+#define generic_kernel_8 JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_8)
 
 static FTYPE a[8*4096];
 static FTYPE b[8*4096];

@@ -1,7 +1,17 @@
-add_library(sfmt SFMT/SFMT.c)
-target_compile_definitions(sfmt PUBLIC SFMT_MEXP=19937)
-my_add_test(gemm_f32
-	${CMAKE_CURRENT_SOURCE_DIR}/gemm_f32.c)
-target_link_libraries(gemm_f32 sfmt)
+function(my_add_test test_name)
+	add_executable(${test_name} ${ARGN})
+	add_test(NAME ${test_name} COMMAND ${test_name})
+
+	target_link_libraries(${test_name} nanoblas)
+	target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/src)
+	target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/test)
+	set_target_properties(${test_name} PROPERTIES CXX_STANDARD 11)
+	set_target_properties(${test_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
+	if(${CMAKE_C_COMPILER_ID} MATCHES "GNU|Clang")
+		target_compile_options(${test_name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3 -Werror -Wall -Wextra -Wpedantic>)
+	endif()
+endfunction()
+
+my_add_test(gemm ${CMAKE_CURRENT_SOURCE_DIR}/gemm.cpp)
 #add_subdirectory(internal)
 #add_subdirectory(kernel)

@@ -1,4 +1,4 @@
-project(nanoblas C ASM-ATT)
+project(nanoblas C CXX ASM-ATT)
 
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 
@@ -47,19 +47,4 @@ add_library(nanoblas
 )
 
 enable_testing()
-function(my_add_test test_name)
-	if (${test_name} MATCHES "_f32|_f64|_fxx")
-		add_executable(${test_name} ${ARGN})
-		add_test(NAME ${test_name} COMMAND ${test_name})
-		target_link_libraries(${test_name} nanoblas)
-		my_target_compile_setup(${test_name})
-		target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/test)
-	else()
-		my_add_test(${test_name}_f32 ${test_src} ${ARGN})
-		target_compile_definitions(${test_name}_f32 PRIVATE USE_F32)
-		my_add_test(${test_name}_f64 ${test_src} ${ARGN})
-		target_compile_definitions(${test_name}_f64 PRIVATE USE_F64)
-	endif()
-endfunction()
-
 add_subdirectory(test)
