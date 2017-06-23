@@ -47,6 +47,7 @@ bool run_test(std::mt19937 gen, impl_t<T> *impl, size_t M, size_t N, size_t K) {
 
 	auto t2s = std::chrono::high_resolution_clock::now();
 	impl(A.data(), B.data(), D.data(), M, N, K);
+	D[0] = 0;
 	auto t2e = std::chrono::high_resolution_clock::now();
 	auto d2 = t2e - t2s;
 	std::cout << "impl " <<
