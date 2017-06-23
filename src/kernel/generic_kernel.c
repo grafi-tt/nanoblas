@@ -46,7 +46,7 @@ void generic_kernel_fun(kernel_state_t *kernel_st, prepack_state_t *prepack_st) 
 		for (int i = 0; i < M_SLICE_LEN; i++) {
 			FTYPE v = a_pack_cur[i];
 			for (int j = 0; j < N_SLICE_LEN; j++) {
-				c_buf_cur[j] = v * b_pack_cur[j];
+				c_buf_cur[j] += v * b_pack_cur[j];
 			}
 			c_buf_cur += N_SLICE_LEN;
 		}

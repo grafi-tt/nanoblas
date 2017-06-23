@@ -3,9 +3,9 @@
 #include "nanoblas.h"
 #include "SFMT/SFMT.h"
 
-#define M 512
-#define N 512
-#define K 512
+#define M 8
+#define N 128
+#define K 64
 
 int main() {
 	sfmt_t sfmt;
@@ -29,7 +29,6 @@ int main() {
 		for (int n = 0; n < N; n++)
 			for (int k = 0; k < K; k++)
 				C[N*m+n] += A[K*m+k] * B[N*k+n];
-	printf("%f %f\n", C[1], C[300]);
 
 	nanoblas_t nb;
 	nanoblas_init(&nb);
@@ -37,7 +36,9 @@ int main() {
 
 	nb.f32_kernel = nanoblas_f32_generic_kernel_4x4;
 	nanoblas_sgemm(&nb, CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1, A, K, B, N, 1, D, N);
-	printf("%f %f\n", D[1], D[300]);
+	for (int i = 0; i < M*N; i++) {
+		printf("%d %f %f\n", i, C[i], D[i]);
+	}
 
 	return 0;
 }

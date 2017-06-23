@@ -67,6 +67,10 @@ static void last_n_step_before_k(gemm_state_t *st) {
 	reset_prepack(&st->b_prepack_st, st->B_next_k, st->n_it->len, st->k_it->len, st->k_it->len);
 }
 
+static void last_n_step(gemm_state_t *st) {
+	st->prepack_n_remained_len = 0;
+}
+
 static void before_m_step(gemm_state_t *st) {
 	st->kernel_st.m_slice_real_len = st->m_it->len;
 }
@@ -80,6 +84,8 @@ static void m_step(gemm_state_t *st) {
 	fswap(&st->a_pack, &st->a_next_pack);
 	st->kernel_st.a_pack_cur       = st->a_pack;
 	st->a_prepack_st.next_pack_cur = st->a_next_pack;
+
+	st->current_prepack_st_p = &st->a_prepack_st;
 
 	const int m_slice_len = st->a_prepack_st.mn_slice_len;
 	st->kernel_st.c_cur = st->C_next;
@@ -234,6 +240,7 @@ void gemm(const nanoblas_t *nb,
 			next(&n_it);
 			n_step(&st);
 			if (n_it.pos == 0) last_n_step_before_k(&st);
+			if (n_it.pos == 0 && k_it.pos == 0) last_n_step(&st);
 			do {
 				before_m_step(&st);
 				next(&m_it);
