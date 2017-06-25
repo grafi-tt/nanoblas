@@ -54,7 +54,7 @@ static void last_n_step_before_k(gemm_state_t *st) {
 }
 
 static void last_n_step(gemm_state_t *st) {
-	set_slice_packed(current_prepack_p(&st->kernel_st));
+	set_packed(current_prepack_p(&st->kernel_st));
 }
 
 static void m_step(gemm_state_t *st) {

@@ -9,27 +9,47 @@
 extern "C" {
 #endif
 
-#define set_slice_packed JOIN(NAMESPACE, FSIZE_PREFIX, set_slice_packed)
-static inline void set_slice_packed(prepack_state_t *st) {
+#define set_packed JOIN(NAMESPACE, FSIZE_PREFIX, set_packed)
+static inline void set_packed(prepack_state_t *st) {
 	st->remained_next_slice_len = 0;
 }
 
-#define is_slice_packed JOIN(NAMESPACE, FSIZE_PREFIX, is_slice_packed)
-static inline int is_slice_packed(prepack_state_t *st) {
+#define is_packed JOIN(NAMESPACE, FSIZE_PREFIX, is_packed)
+static inline int is_packed(prepack_state_t *st) {
 	return st->remained_next_slice_len <= 0;
 }
 
 #define pack_all JOIN(NAMESPACE, FSIZE_PREFIX, pack_all)
 static inline void pack_all(prepack_state_t *st, pack_fun_t *pack_fun) {
-	while (!is_slice_packed(st)) {
-		pack_fun(st);
+	if (!is_packed(st)) {
+		do {
+			st->sched_len = st->len - st->packed_len;
+			pack_fun(st);
+
+			st->next_cur = (const FTYPE *)((const char *)st->next_bak + st->interval_mn * st->slice_len);
+			st->next_bak = st->next_cur;
+			st->remained_next_slice_len -= st->slice_len;
+			st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
+
+			st->packed_len = 0;
+		} while (!is_packed(st));
+		st->sched_len = st->max_sched_len;
 	}
 }
 
 #define pack_slice JOIN(NAMESPACE, FSIZE_PREFIX, pack_slice)
 static inline void pack_slice(prepack_state_t *st, pack_fun_t *pack_fun) {
-	if (!is_slice_packed(st)) {
+	if (!is_packed(st)) {
+		st->sched_len = st->len - st->packed_len;
 		pack_fun(st);
+
+		st->next_cur = (const FTYPE *)((const char *)st->next_bak + st->interval_mn * st->slice_len);
+		st->next_bak = st->next_cur;
+		st->remained_next_slice_len -= st->slice_len;
+		st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
+
+		st->packed_len = 0;
+		st->sched_len = st->max_sched_len;
 	}
 }
 

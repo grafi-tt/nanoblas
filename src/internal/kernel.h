@@ -53,9 +53,9 @@ static inline kernel_state_t kernel_state_new(
 		.ldc         = sizeof(FTYPE) * ldc,
 		.k_len       = k_len,
 		.prepack.sel.a = prepack_state_new(
-				a, NULL, m_slice_len, m_slice_len_limit, k_len, a_max_sched_len, interval_m, interval_k_in_a),
+				a, a_next_pack, m_slice_len, m_slice_len_limit, k_len, a_max_sched_len, interval_m, interval_k_in_a),
 		.prepack.sel.b = prepack_state_new(
-				b, NULL, n_slice_len, n_slice_len_limit, k_len, b_max_sched_len, interval_n, interval_k_in_b),
+				b, b_next_pack, n_slice_len, n_slice_len_limit, k_len, b_max_sched_len, interval_n, interval_k_in_b),
 	};
 	return st;
 }
@@ -64,11 +64,11 @@ static inline kernel_state_t kernel_state_new(
 static inline void update_prepack(kernel_state_t *st) {
 	if (st->current_prepack != 0) {
 		step_prepack(current_prepack_p(st));
-		if (is_slice_packed(current_prepack_p(st))) {
+		if (is_packed(current_prepack_p(st))) {
 			if (st->current_prepack != current_prepack_b) {
 				st->current_prepack = current_prepack_b;
 			}
-			if (is_slice_packed(current_prepack_p(st))) {
+			if (is_packed(current_prepack_p(st))) {
 				st->current_prepack = 0;
 			}
 		}
