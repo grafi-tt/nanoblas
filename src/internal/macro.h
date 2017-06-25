@@ -95,16 +95,26 @@
 /**
  * @name Type aliases
  * \{ */
-#define kernel_t         JOIN(NAMESPACE, FSIZE_PREFIX, kernel_t)
-#define kernel_fun_t     JOIN(NAMESPACE, FSIZE_PREFIX, kernel_fun_t)
-#define kernel_state_t   JOIN(NAMESPACE, FSIZE_PREFIX, kernel_state_t)
-#define prepack_state_t  JOIN(NAMESPACE, FSIZE_PREFIX, prepack_state_t)
+#define kernel_t            JOIN(NAMESPACE, FSIZE_PREFIX, kernel_t)
+#define kernel_fun_t        JOIN(NAMESPACE, FSIZE_PREFIX, kernel_fun_t)
+#define pack_fun_t          JOIN(NAMESPACE, FSIZE_PREFIX, pack_fun_t)
+#define max_sched_len_fun_t JOIN(NAMESPACE, FSIZE_PREFIX, max_sched_len_fun_t)
+#define kernel_state_t      JOIN(NAMESPACE, FSIZE_PREFIX, kernel_state_t)
+#define prepack_state_t     JOIN(NAMESPACE, FSIZE_PREFIX, prepack_state_t)
+/** \} */
+
+/**
+ * @name Constants / helper functions aliases
+ * \{ */
+#define current_prepack_a JOIN(NAMESPACE, FSIZE_PREFIX, current_prepack_a)
+#define current_prepack_b JOIN(NAMESPACE, FSIZE_PREFIX, current_prepack_b)
+#define current_prepack_p JOIN(NAMESPACE, FSIZE_PREFIX, current_prepack_p)
 /** \} */
 
 /**
  * @name Member name aliases
  * \{ */
-#define kernel    JOIN(FSIZE_PREFIX, kernel)
+#define kernel        JOIN(FSIZE_PREFIX, kernel)
 #define blk_n_max_len JOIN(FSIZE_PREFIX, blk_n_max_len)
 #define blk_k_max_len JOIN(FSIZE_PREFIX, blk_k_max_len)
 /** \} */

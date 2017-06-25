@@ -14,7 +14,7 @@ static inline int imax(int a, int b) {
 	return a > b ? a : b;
 }
 #define fswap JOIN(FSIZE_PREFIX, fswap)
-static inline void fswap(FTYPE *restrict *restrict p, FTYPE *restrict *restrict q) {
+static inline void fswap(FTYPE **p, FTYPE **q) {
 	FTYPE *tmp = *p;
 	*p = *q;
 	*q = tmp;

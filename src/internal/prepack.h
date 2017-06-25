@@ -9,79 +9,82 @@
 extern "C" {
 #endif
 
+#define set_slice_packed JOIN(NAMESPACE, FSIZE_PREFIX, set_slice_packed)
+static inline void set_slice_packed(prepack_state_t *st) {
+	st->remained_next_slice_len = 0;
+}
+
+#define is_slice_packed JOIN(NAMESPACE, FSIZE_PREFIX, is_slice_packed)
+static inline int is_slice_packed(prepack_state_t *st) {
+	return st->remained_next_slice_len <= 0;
+}
+
+#define pack_all JOIN(NAMESPACE, FSIZE_PREFIX, pack_all)
+static inline void pack_all(prepack_state_t *st, pack_fun_t *pack_fun) {
+	while (!is_slice_packed(st)) {
+		pack_fun(st);
+	}
+}
+
+#define pack_slice JOIN(NAMESPACE, FSIZE_PREFIX, pack_slice)
+static inline void pack_slice(prepack_state_t *st, pack_fun_t *pack_fun) {
+	if (!is_slice_packed(st)) {
+		pack_fun(st);
+	}
+}
+
 #define step_prepack JOIN(NAMESPACE, FSIZE_PREFIX, step_prepack)
-static inline int step_prepack(prepack_state_t *st) {
-	st->packed_size += st->sched_size;
-	if (st->packed_size == st->size) {
-		st->next_cur = st->next_bak + st->interval_mn * st->mn_slice_len;
+static inline void step_prepack(prepack_state_t *st) {
+	st->packed_len += st->sched_len;
+	if (st->packed_len == st->len) {
+		st->next_cur = (const FTYPE *)((const char *)st->next_bak + st->interval_mn * st->slice_len);
 		st->next_bak = st->next_cur;
-		st->packed_size = 0;
-		st->sched_size = st->max_sched_size;
-		return 1;
+		st->packed_len = 0;
+		st->sched_len = st->max_sched_len;
+
+		st->remained_next_slice_len -= st->slice_len;
+		st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
 	} else {
-		st->sched_size = imin(st->max_sched_size, st->size - st->packed_size);
-		return 0;
+		st->sched_len = imin(st->max_sched_len, st->len - st->packed_len);
 	}
 }
 
 #define limit_prepack JOIN(NAMESPACE, FSIZE_PREFIX, limit_prepack)
-static inline void limit_prepack(prepack_state_t *st, int mn_slice_real_len_limit) {
-	st->mn_slice_real_len = imin(st->mn_slice_len, mn_slice_real_len_limit);
+static inline void limit_prepack(prepack_state_t *st, int sum_next_slice_len) {
+	st->remained_next_slice_len = sum_next_slice_len;
+	st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
 }
 
 #define restart_prepack JOIN(NAMESPACE, FSIZE_PREFIX, restart_prepack)
 static inline void restart_prepack(prepack_state_t *st,
-		const FTYPE *next, int mn_slice_real_len_limit) {
-	limit_prepack(st, mn_slice_real_len_limit);
+		const FTYPE *next, int sum_next_slice_len) {
+	limit_prepack(st, sum_next_slice_len);
 	st->next_cur = next;
 	st->next_bak = next;
 }
 
 #define reset_prepack JOIN(NAMESPACE, FSIZE_PREFIX, reset_prepack)
 static inline void reset_prepack(prepack_state_t *st,
-		const FTYPE *next, int mn_slice_real_len_limit, int k_len, int max_sched_size) {
-	restart_prepack(st, next, mn_slice_real_len_limit);
-	st->size = st->mn_slice_len * k_len;
-	st->max_sched_size = max_sched_size;
-	st->sched_size = imin(st->max_sched_size, st->size);
+		const FTYPE *next, int sum_next_slice_len, int k_next_len, int max_sched_len) {
+	restart_prepack(st, next, sum_next_slice_len);
+	st->len = k_next_len;
+	st->max_sched_len = max_sched_len;
+	st->sched_len = st->max_sched_len;
 }
 
 #define prepack_state_new JOIN(NAMESPACE, FSIZE_PREFIX, prepack_state_new)
 static inline prepack_state_t prepack_state_new(
-		const FTYPE *next, FTYPE *next_pack, int slice_len, int mn_slice_real_len_limit,
-		int k_len, int max_sched_size, ptrdiff_t interval_mn, ptrdiff_t interval_k) {
+		const FTYPE *next, FTYPE *next_pack, int slice_len, int sum_next_slice_len,
+		int k_next_len, int max_sched_len, ptrdiff_t interval_mn, ptrdiff_t interval_k) {
 	prepack_state_t st = {
 		.next_pack_cur = next_pack,
-		.mn_slice_pos = 0,
-		.mn_slice_len = slice_len,
-		.interval_mn = interval_mn,
-		.proceed_k = interval_k - slice_len * interval_mn,
-		.packed_size = 0,
+		.interval_mn = sizeof(FTYPE) * interval_mn,
+		.interval_k = sizeof(FTYPE) * interval_k,
+		.slice_len = slice_len,
+		.packed_len = 0,
 	};
-	reset_prepack(&st, next, mn_slice_real_len_limit, k_len, max_sched_size);
+	reset_prepack(&st, next, sum_next_slice_len, k_next_len, max_sched_len);
 	return st;
-}
-
-#define pack_all JOIN(NAMESPACE, FSIZE_PREFIX, pack_all)
-static inline void pack_all(prepack_state_t *st) {
-	const FTYPE *restrict next_cur = st->next_cur;
-	FTYPE *restrict next_pack_cur = st->next_pack_cur;
-
-	do {
-		do {
-			FTYPE v = (st->mn_slice_pos++ < st->mn_slice_real_len) ? *next_cur : 0;
-			*next_pack_cur++ = v;
-			next_cur += st->interval_mn;
-			st->packed_size++;
-		} while (st->mn_slice_pos < st->mn_slice_len);
-		st->mn_slice_pos = 0;
-		next_cur += st->proceed_k;
-	} while (st->packed_size < st->size);
-	st->next_cur = st->next_bak + st->interval_mn * st->mn_slice_len;
-	st->next_bak = st->next_cur;
-	st->packed_size = 0;
-	st->sched_size = st->max_sched_size;
-	st->next_pack_cur = next_pack_cur;
 }
 
 #ifdef __cplusplus

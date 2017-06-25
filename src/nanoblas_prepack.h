@@ -7,36 +7,38 @@ struct nanoblas_f32_prepack_state_t {
 	/* read/written by kernel */
 	const float *next_cur;
 	float *next_pack_cur;
-	int mn_slice_pos;
 	/* read by kernel */
-	int sched_size;
-	int mn_slice_real_len;
-	const int mn_slice_len;
-	const ptrdiff_t interval_mn;
-	const ptrdiff_t proceed_k;
+	ptrdiff_t interval_mn;
+	ptrdiff_t interval_k;
+	const int slice_len;
+	int next_slice_real_len;
+	int sched_len;
 	/* internal */
+	int len;
+	int packed_len;
+	int remained_next_slice_len;
+	int max_sched_len;
+	int dummy;
 	const float *next_bak;
-	int size;
-	int packed_size;
-	int max_sched_size;
 };
 
 struct nanoblas_f64_prepack_state_t {
 	/* read/written by kernel */
 	const double *next_cur;
 	double *next_pack_cur;
-	int mn_slice_pos;
 	/* read by kernel */
-	int sched_size;
-	int mn_slice_real_len;
-	const int mn_slice_len;
-	const ptrdiff_t interval_mn;
-	const ptrdiff_t proceed_k;
+	ptrdiff_t interval_mn;
+	ptrdiff_t interval_k;
+	const int slice_len;
+	int next_slice_real_len;
+	int sched_len;
 	/* internal */
+	int len;
+	int packed_len;
+	int max_sched_len;
+	int remained_next_slice_len;
+	int dummy;
 	const double *next_bak;
-	int size;
-	int packed_size;
-	int max_sched_size;
 };
 
 #endif

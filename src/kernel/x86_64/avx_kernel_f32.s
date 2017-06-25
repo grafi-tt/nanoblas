@@ -8,13 +8,13 @@
 .set offset_k_len,             40
 
 // offsets in prepack_state_t
-.set offset_next_cur,          0
-.set offset_next_pack_cur,     8
-.set offset_sched_len,         16
-.set offset_mn_slice_real_len, 20
-.set offset_mn_slice_len,      24
-.set offset_interval_mn,       32
-.set offset_proceed_k,         40
+.set offset_next_cur,            0
+.set offset_next_pack_cur,       8
+.set offset_interval_mn,         16
+.set offset_interval_k,          24
+.set offset_slice_len,           32
+.set offset_next_slice_real_len, 36
+.set offset_sched_len,           40
 
 .section .text
 .balign 32
@@ -86,7 +86,7 @@ nanoblas_f32_avx_pack_asm:
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
 	movl offset_sched_len(%rdx), %eax
 	shll $4, %eax
-	addl offset_mn_slice_real_len(%rdx), %eax
+	addl offset_next_slice_real_len(%rdx), %eax
 	leaq loadmask(%rip), %r9
 	vmovups -32(%r9, %rax, 4), %ymm2
 	vmovaps (%r9), %ymm1
@@ -132,13 +132,12 @@ nanoblas_f32_avx_pack_asm:
 .balign 16
 pack_trans:
 	movq offset_interval_k(%rdx), %rcx
-	movl offset_mn_slice_real_len(%rdx), %eax
 
 	// ymm0 is reserved by nanoblas_avx_kernel_asm
 	// ymm1 is anyway [1.0, ..., 1.0]
 	// ymm2 will be the template of load mask
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
-	movl offset_mn_slice_real_len(%rdx), %eax
+	movl offset_next_slice_real_len(%rdx), %eax
 	shll $4, %eax
 	addl offset_sched_len(%rdx), %eax
 	leaq loadmask(%rip), %r9
