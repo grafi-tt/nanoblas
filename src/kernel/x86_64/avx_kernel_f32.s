@@ -24,68 +24,68 @@ loadmask:
 .rept 8
 .float 1
 .endr
-// [0, ..., 0, -1.0, ..., -1.0]
-.rept 8
-.float 0
-.endr
+// [-1.0, ..., -1.0, 0, ..., 0]
 .rept 8
 .float -1
 .endr
-// [0, ..., 0, -2.0, ..., -2.0]
 .rept 8
 .float 0
 .endr
+// [-2.0, ..., -2.0, 0, ..., 0]
 .rept 8
 .float -2
 .endr
-// [0, ..., 0, -3.0, ..., -3.0]
 .rept 8
 .float 0
 .endr
+// [-3.0, ..., -3.0, 0, ..., 0]
 .rept 8
 .float -3
 .endr
-// [0, ..., 0, -4.0, ..., -4.0]
 .rept 8
 .float 0
 .endr
+// [-4.0, ..., -4.0, 0, ..., 0]
 .rept 8
 .float -4
 .endr
-// [0, ..., 0, -5.0, ..., -5.0]
 .rept 8
 .float 0
 .endr
+// [-5.0, ..., -5.0, 0, ..., 0]
 .rept 8
 .float -5
 .endr
-// [0, ..., 0, -6.0, ..., -6.0]
 .rept 8
 .float 0
 .endr
+// [-6.0, ..., -6.0, 0, ..., 0]
 .rept 8
 .float -6
 .endr
-// [0, ..., 0, -7.0, ..., -7.0]
 .rept 8
 .float 0
 .endr
+// [-7.0, ..., -7.0, 0, ..., 0]
 .rept 8
 .float -7
 .endr
-// [0, ..., 0, -8.0, ..., -8.0]
 .rept 8
 .float 0
 .endr
+// [-8.0, ..., -8.0, 0, ..., 0]
 .rept 8
 .float -8
+.endr
+.rept 8
+.float 0
 .endr
 
 .globl nanoblas_f32_avx_pack_asm
 nanoblas_f32_avx_pack_asm:
 	movq offset_next_cur(%rcx), %r8
-	movq offset_interval_mn(%rcx), %r10
-	cmpq $4, %r10
+	movq offset_interval_mn(%rcx), %rdx
+	cmpq $4, %rdx
 	jne pack_trans
 
 	// ymm0 is reserved by nanoblas_avx_kernel_asm
@@ -106,31 +106,31 @@ nanoblas_f32_avx_pack_asm:
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, (%r9)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, 32(%r9)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, 64(%r9)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, 96(%r9)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, 128(%r9)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, 160(%r9)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, 192(%r9)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vmovaps %ymm3, 224(%r9)
 	vaddps %ymm1, %ymm2, %ymm2
@@ -139,7 +139,7 @@ nanoblas_f32_avx_pack_asm:
 
 .balign 16
 pack_trans:
-	movq offset_interval_k(%rcx), %r10
+	movq offset_interval_k(%rcx), %rdx
 
 	// ymm0 is reserved by nanoblas_avx_kernel_asm
 	// ymm1 is anyway [1.0, ..., 1.0]
@@ -169,35 +169,35 @@ pack_trans:
 	vmaskmovps (%r8), %ymm2, %ymm4
 	vmovaps %ymm4, (%rsp)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm5
 	vmovaps %ymm5, 32(%rsp)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm6
 	vmovaps %ymm6, 64(%rsp)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm7
 	vmovaps %ymm7, 96(%rsp)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vinsertf128 $1, %xmm3, %ymm4, %ymm4
 	vmovaps %ymm3, 128(%rsp)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vinsertf128 $1, %xmm3, %ymm5, %ymm5
 	vmovaps %ymm3, 160(%rsp)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vinsertf128 $1, %xmm3, %ymm6, %ymm6
 	vmovaps %ymm3, 192(%rsp)
 	vaddps %ymm1, %ymm2, %ymm2
-	addq %r10, %r8
+	addq %rdx, %r8
 	vmaskmovps (%r8), %ymm2, %ymm3
 	vinsertf128 $1, %xmm3, %ymm7, %ymm7
 	vmovaps %ymm3, 224(%rsp)
@@ -254,7 +254,7 @@ nanoblas_f32_avx_kernel_asm:
 	//          #(8 - n_slice_real_len)     #n_slice_rean_len
 	movl offset_m_slice_real_len(%rcx), %eax
 	shll $4, %eax
-	addl offset_n_slice_real_len(%rcx), %eax
+	subl offset_n_slice_real_len(%rcx), %eax
 	leaq loadmask(%rip), %r9
 	vmovups -32(%r9, %rax, 4), %ymm3
 	// save ymm3 to ymm0
@@ -393,11 +393,11 @@ avx_kernel_nopack_loop:
 	movq %r9, offset_b_pack_cur(%rcx)
 
 	// if required, do packing
-	mov %rcx, %rdx
-	mov offset_current_prepack(%rcx), %rcx
+	movq %rcx, %rdx
+	movq offset_current_prepack(%rcx), %rcx
 	test %rcx, %rcx
-	add %rdx, %rcx
-	jnz store_c
+	jz store_c
+	addq %rdx, %rcx
 	call nanoblas_f32_avx_pack_asm
 
 .balign 16
