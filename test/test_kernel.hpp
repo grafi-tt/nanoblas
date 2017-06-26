@@ -13,8 +13,8 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 		int k_len, int m_slice_real_len, int n_slice_real_len, ptrdiff_t ldc) {
 	std::uniform_real_distribution<FTYPE> dist(0, 1);
 
-	std::vector<FTYPE> a_pack(m_slice_real_len * k_len + 32/sizeof(FTYPE));
-	std::vector<FTYPE> b_pack(n_slice_real_len * k_len + 32/sizeof(FTYPE));
+	std::vector<FTYPE> a_pack(kernel.m_slice_len * k_len + 32/sizeof(FTYPE));
+	std::vector<FTYPE> b_pack(kernel.n_slice_len * k_len + 32/sizeof(FTYPE));
 	std::vector<FTYPE> c_cur(ldc * m_slice_real_len);
 	std::vector<FTYPE> d_cur(ldc * m_slice_real_len);
 
@@ -80,7 +80,7 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 template<typename FTYPE>
 bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 		int k_len, int m_slice_real_len, int n_slice_real_len) {
-	return run_mult_test<FTYPE>(gen, kernel, k_len, m_slice_real_len, n_slice_real_len, kernel.n_slice_len);
+	return run_mult_test<FTYPE>(gen, kernel, k_len, m_slice_real_len, n_slice_real_len, n_slice_real_len);
 }
 
 template<typename FTYPE>

@@ -9,14 +9,14 @@ struct RK {
 		for (int i = 0; i < prepack_st->sched_len; i++) {
 			for (int j = 0; j < prepack_st->slice_len; j++) {
 				const FTYPE *next_cur = reinterpret_cast<const FTYPE *>(
-						reinterpret_cast<const char *>(prepack_st->next_cur) +
+						reinterpret_cast<uintptr_t>(prepack_st->next_cur) +
 						prepack_st->interval_k * i + prepack_st->interval_mn * j);
 				FTYPE v = (j < prepack_st->next_slice_real_len) ? *next_cur : 0;
 				prepack_st->next_pack_cur[prepack_st->slice_len * i + j] = v;
 			}
 		}
 		prepack_st->next_cur = reinterpret_cast<const FTYPE *>(
-				reinterpret_cast<const char *>(prepack_st->next_cur) +
+				reinterpret_cast<uintptr_t>(prepack_st->next_cur) +
 				prepack_st->interval_k * prepack_st->sched_len);
 		prepack_st->next_pack_cur += prepack_st->slice_len * prepack_st->sched_len;
 	}
@@ -28,10 +28,12 @@ struct RK {
 		for (int k = 0; k < kernel_st->k_len; k++) {
 			for (int m = 0; m < m_slice_len; m++) {
 				for (int n = 0; n < n_slice_len; n++) {
-					FTYPE *c_cur = reinterpret_cast<FTYPE *>(
-							reinterpret_cast<char *>(kernel_st->c_cur) + kernel_st->ldc * m) + n;
-					*c_cur += kernel_st->a_pack_cur[m_slice_len * k + m] *
-							kernel_st->b_pack_cur[n_slice_len * k + n];
+					if (m < kernel_st->m_slice_real_len && n < kernel_st->n_slice_real_len) {
+						FTYPE *c_cur = reinterpret_cast<FTYPE *>(
+								reinterpret_cast<uintptr_t>(kernel_st->c_cur) + kernel_st->ldc * m) + n;
+						*c_cur += kernel_st->a_pack_cur[m_slice_len * k + m] *
+								kernel_st->b_pack_cur[n_slice_len * k + n];
+					}
 				}
 			}
 		}
