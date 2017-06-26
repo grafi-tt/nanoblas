@@ -13,8 +13,8 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 		int k_len, int m_slice_real_len, int n_slice_real_len, ptrdiff_t ldc) {
 	std::uniform_real_distribution<FTYPE> dist(0, 1);
 
-	std::vector<FTYPE> a_pack(m_slice_real_len * k_len);
-	std::vector<FTYPE> b_pack(n_slice_real_len * k_len);
+	std::vector<FTYPE> a_pack(m_slice_real_len * k_len + 32/sizeof(FTYPE));
+	std::vector<FTYPE> b_pack(n_slice_real_len * k_len + 32/sizeof(FTYPE));
 	std::vector<FTYPE> c_cur(ldc * m_slice_real_len);
 	std::vector<FTYPE> d_cur(ldc * m_slice_real_len);
 
@@ -24,10 +24,15 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 	for (auto &&v: c_cur) v = dist(gen);
 	for (auto &&v: d_cur) v = dist(gen2);
 
+	const FTYPE *a_pack_aligned = reinterpret_cast<const FTYPE*>(
+			reinterpret_cast<uintptr_t>(a_pack.data()) + (-reinterpret_cast<uintptr_t>(a_pack.data()) & 31));
+	const FTYPE *b_pack_aligned = reinterpret_cast<const FTYPE*>(
+			reinterpret_cast<uintptr_t>(b_pack.data()) + (-reinterpret_cast<uintptr_t>(b_pack.data()) & 31));
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 	nanoblas::kernel_state_t<FTYPE> st = {
-		a_pack.data(), b_pack.data(), c_cur.data(), ldc * static_cast<int>(sizeof(FTYPE)),
+		a_pack_aligned, b_pack_aligned, c_cur.data(), ldc * static_cast<int>(sizeof(FTYPE)),
 		m_slice_real_len, n_slice_real_len, k_len, 0
 	};
 #pragma GCC diagnostic pop
@@ -38,19 +43,19 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 
 	RK<FTYPE>::reference_kernel.kernel_fun(&st);
 
-	st.a_pack_cur = a_pack.data();
-	st.b_pack_cur = b_pack.data();
+	st.a_pack_cur = a_pack_aligned;
+	st.b_pack_cur = b_pack_aligned;
 	st.c_cur = d_cur.data();
 
 	kernel.kernel_fun(&st);
 
 	bool s = false;
-	if (st.a_pack_cur != a_pack.data() + kernel.m_slice_len * k_len) {
-		std::cerr << "a_pack_cur is incremented by "<<st.a_pack_cur - a_pack.data()<<", not "<<kernel.m_slice_len * k_len << std::endl;
+	if (st.a_pack_cur != a_pack_aligned + kernel.m_slice_len * k_len) {
+		std::cerr << "a_pack_cur is incremented by "<<st.a_pack_cur - a_pack_aligned<<", not "<<kernel.m_slice_len * k_len << std::endl;
 		s = true;
 	}
-	if (st.b_pack_cur != b_pack.data() + kernel.n_slice_len * k_len) {
-		std::cerr << "b_pack_cur is incremented by "<<st.b_pack_cur - b_pack.data()<<", not "<<kernel.n_slice_len * k_len << std::endl;
+	if (st.b_pack_cur != b_pack_aligned + kernel.n_slice_len * k_len) {
+		std::cerr << "b_pack_cur is incremented by "<<st.b_pack_cur - b_pack_aligned<<", not "<<kernel.n_slice_len * k_len << std::endl;
 		s = true;
 	}
 	if (st.c_cur != d_cur.data() + kernel.n_slice_len) {

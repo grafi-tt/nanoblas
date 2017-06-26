@@ -143,8 +143,7 @@ void gemm(const nanoblas_t *nb,
 
 	/* allocate pack (VLA) */
 	FTYPE mem[2*m_slice_len*blk_k_max_len + 2*blk_n_max_len*blk_k_max_len + 32/sizeof(FTYPE)];
-	int mem_offset = ((uintptr_t)mem & 32)/sizeof(FTYPE);
-	FTYPE *mem_aligned = mem_offset ? mem + 32/sizeof(FTYPE) - mem_offset : mem;
+	FTYPE *mem_aligned = (FTYPE *)((uintptr_t)mem + (-(uintptr_t)mem & 31));
 	FTYPE *a_pack      = mem_aligned;
 	FTYPE *a_next_pack = mem_aligned +   m_slice_len*blk_k_max_len;
 	FTYPE *b_pack      = mem_aligned + 2*m_slice_len*blk_k_max_len;
