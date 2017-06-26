@@ -44,6 +44,7 @@ static void k_step(gemm_state_t *st) {
 
 static void n_step(gemm_state_t *st) {
 	swap_b_pack(&st->kernel_st, st->pack_fun);
+	limit_prepack(current_prepack_p(&st->kernel_st), st->n_it->len);
 }
 
 static void last_n_step_before_k(gemm_state_t *st) {
