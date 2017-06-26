@@ -33,7 +33,7 @@ static inline void pack_all(prepack_state_t *st, pack_fun_t *pack_fun) {
 
 			st->packed_len = 0;
 		} while (!is_packed(st));
-		st->sched_len = st->max_sched_len;
+		st->sched_len = imin(st->max_sched_len, st->len);
 	}
 }
 
@@ -49,7 +49,7 @@ static inline void pack_slice(prepack_state_t *st, pack_fun_t *pack_fun) {
 		st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
 
 		st->packed_len = 0;
-		st->sched_len = st->max_sched_len;
+		st->sched_len = imin(st->max_sched_len, st->len);
 	}
 }
 
@@ -63,7 +63,7 @@ static inline void step_prepack(prepack_state_t *st) {
 		st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
 
 		st->packed_len = 0;
-		st->sched_len = st->max_sched_len;
+		st->sched_len = imin(st->max_sched_len, st->len);
 	} else {
 		st->sched_len = imin(st->max_sched_len, st->len - st->packed_len);
 	}
@@ -89,7 +89,7 @@ static inline void reset_prepack(prepack_state_t *st,
 	restart_prepack(st, next, sum_next_slice_len);
 	st->len = k_next_len;
 	st->max_sched_len = max_sched_len;
-	st->sched_len = st->max_sched_len;
+	st->sched_len = imin(st->max_sched_len, st->len);
 }
 
 #define prepack_state_new JOIN(NAMESPACE, FSIZE_PREFIX, prepack_state_new)
