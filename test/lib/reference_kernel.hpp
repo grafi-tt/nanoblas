@@ -30,7 +30,7 @@ struct RK {
 			for (int j = 0; j < prepack_st->slice_len; j++) {
 				const FTYPE *next_cur = reinterpret_cast<const FTYPE *>(
 						reinterpret_cast<const char *>(prepack_st->next_cur) +
-						prepack_st->interval_k * i + prepack_st->interval_k * j);
+						prepack_st->interval_k * i + prepack_st->interval_mn * j);
 				FTYPE v = (j < prepack_st->next_slice_real_len) ? *next_cur : 0;
 				prepack_st->next_pack_cur[prepack_st->slice_len * i + j] = v;
 			}
