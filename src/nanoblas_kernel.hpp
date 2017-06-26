@@ -33,6 +33,7 @@ constexpr int current_prepack_b<double>() {
 	return sizeof(struct _nanoblas_f64_kernel_state_former_t) + sizeof(nanoblas_f64_prepack_state_t);
 }
 
+
 template<typename FTYPE>
 static inline prepack_state_t<FTYPE> *current_prepack_p(kernel_state_t<FTYPE> *st) {
 	return st->current_prepack == 0 ?
