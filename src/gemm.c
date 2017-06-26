@@ -59,6 +59,7 @@ static void last_n_step(gemm_state_t *st) {
 
 static void m_step(gemm_state_t *st) {
 	swap_a_pack(&st->kernel_st, st->pack_fun);
+	limit_prepack(current_prepack_p(&st->kernel_st), st->m_it->len);
 
 	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
 	st->kernel_st.c_cur = st->C_next;
