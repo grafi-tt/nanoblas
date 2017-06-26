@@ -20,7 +20,6 @@ typedef struct {
 	const FTYPE *const B;
 	const FTYPE *B_next_k;
 	FTYPE *const C;
-	FTYPE *C_cur;
 	FTYPE *C_next;
 	kernel_fun_t *const kernel_fun;
 	pack_fun_t *const pack_fun;
@@ -61,7 +60,7 @@ static void m_step(gemm_state_t *st) {
 	swap_a_pack(&st->kernel_st, st->pack_fun);
 
 	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
-	st->C_cur = st->C_next;
+	st->kernel_st.c_cur = st->C_next;
 	st->C_next = (FTYPE *)((char *)st->C_next + st->kernel_st.ldc * m_slice_len);
 }
 
@@ -96,7 +95,7 @@ static void kernel_loop(gemm_state_t *st) {
 	const int n_slice_len = st->kernel_st.prepack.mem.n_slice_len;
 
 	for (size_t n_cur = n_pos; n_cur < n_end; n_cur += n_slice_len) {
-		set_kernel_info(&st->kernel_st, st->C_cur, st->m_it_bak->len, (int)(n_end - n_cur), st->k_it_bak->len);
+		set_kernel_info(&st->kernel_st, st->m_it_bak->len, (int)(n_end - n_cur), st->k_it_bak->len);
 
 		st->kernel_fun(&st->kernel_st);
 

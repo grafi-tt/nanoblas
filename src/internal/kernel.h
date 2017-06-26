@@ -30,8 +30,7 @@ static inline void swap_b_pack(kernel_state_t *st, pack_fun_t *pack_fun) {
 
 #define set_kernel_info JOIN(NAMESPACE, FSIZE_PREFIX, set_kernel_info)
 static inline void set_kernel_info(kernel_state_t *st,
-		FTYPE *c_cur, int m_slice_real_len_limit, int n_slice_real_len_limit, int k_len) {
-	st->c_cur = c_cur;
+		int m_slice_real_len_limit, int n_slice_real_len_limit, int k_len) {
 	st->m_slice_real_len = imin(st->prepack.mem.m_slice_len, m_slice_real_len_limit);
 	st->n_slice_real_len = imin(st->prepack.mem.n_slice_len, n_slice_real_len_limit);
 	st->k_len = k_len;

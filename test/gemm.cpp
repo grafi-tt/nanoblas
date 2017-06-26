@@ -12,7 +12,7 @@ void sgemm_impl(const float *A, const float *B, float *C, size_t M, size_t N, si
 void dgemm_impl(const double *A, const double *B, double *C, size_t M, size_t N, size_t K) {
 	nanoblas_t nb;
 	nanoblas_init(&nb);
-	nb.f32_kernel = nanoblas_f32_generic_kernel_4x4;
+	nb.f64_kernel = nanoblas_f64_generic_kernel_4x4;
 	nanoblas_dgemm(&nb, CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1, A, K, B, N, 1, C, N);
 }
 
