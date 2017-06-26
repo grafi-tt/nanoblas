@@ -12,5 +12,6 @@ function(my_add_test test_name)
 	endif()
 endfunction()
 
-my_add_test(gemm ${CMAKE_CURRENT_SOURCE_DIR}/gemm.cpp)
+my_add_test(test_gemm ${CMAKE_CURRENT_SOURCE_DIR}/test_gemm.cpp)
+my_add_test(test_kernel ${CMAKE_CURRENT_SOURCE_DIR}/test_kernel.cpp)
 #add_subdirectory(kernel)

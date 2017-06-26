@@ -1,5 +1,5 @@
-#ifndef NANOBLAS_TEST_GEMM_HPP
-#define NANOBLAS_TEST_GEMM_HPP
+#ifndef NANOBLAS_TEST_TEST_GEMM_HPP
+#define NANOBLAS_TEST_TEST_GEMM_HPP
 
 #include <cstdint>
 #include <chrono>
@@ -8,19 +8,18 @@
 #include <random>
 #include <vector>
 #include "lib/util.hpp"
-#include "lib/reference_kernel.hpp"
 
-template <typename FTYPE>
+template<typename FTYPE>
 using impl_t = std::function<void(const FTYPE *, const FTYPE *, FTYPE *, size_t, size_t, size_t, size_t, size_t, size_t)>;
 
 template<typename FTYPE>
 bool run_test(std::mt19937 gen, const impl_t<FTYPE> &impl, size_t M, size_t N, size_t K, size_t lda, size_t ldb, size_t ldc) {
 	std::uniform_real_distribution<FTYPE> dist(0, 1);
 
-	std::vector<FTYPE> A((M+2)*lda, 0);
-	std::vector<FTYPE> B((K+2)*ldb, 0);
-	std::vector<FTYPE> C((M+2)*ldc, 0);
-	std::vector<FTYPE> D((M+2)*ldc, 0);
+	std::vector<FTYPE> A((M+2)*lda);
+	std::vector<FTYPE> B((K+2)*ldb);
+	std::vector<FTYPE> C((M+2)*ldc);
+	std::vector<FTYPE> D((M+2)*ldc);
 
 	for (auto &&v: A) v = dist(gen);
 	for (auto &&v: B) v = dist(gen);

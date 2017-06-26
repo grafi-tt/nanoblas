@@ -1,5 +1,5 @@
 #include "nanoblas.hpp"
-#include "gemm.hpp"
+#include "test_gemm.hpp"
 #include "kernel/generic_kernel.h"
 #include "lib/reference_kernel.hpp"
 
@@ -51,14 +51,22 @@ int main() {
 	RK<double>::reference_kernel.n_slice_len = 4;
 	RK<double>::reference_kernel.max_sched_len_fun = max_sched_len_fun1<double>;
 
+	std::cout << "reference 4x4" << std::endl;
 	nb.f32_kernel = RK<float>::reference_kernel;
 	nb.f64_kernel = RK<double>::reference_kernel;
 
 	bool s = false;
 	s = run_test_set(gen, nb) || s;
 
+	std::cout << "generic 4x4" << std::endl;
 	nb.f32_kernel = nanoblas_f32_generic_kernel_4x4;
 	nb.f64_kernel = nanoblas_f64_generic_kernel_4x4;
+
+	s = run_test_set(gen, nb) || s;
+
+	std::cout << "generic 6x4" << std::endl;
+	nb.f32_kernel = nanoblas_f32_generic_kernel_6x4;
+	nb.f64_kernel = nanoblas_f64_generic_kernel_6x4;
 
 	s = run_test_set(gen, nb) || s;
 

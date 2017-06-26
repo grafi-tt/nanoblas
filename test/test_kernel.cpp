@@ -1,0 +1,12 @@
+#include "test_kernel.hpp"
+#include "kernel/generic_kernel.h"
+
+int main() {
+	std::mt19937 gen(314159265);
+	bool s = false;
+
+	s = run_mult_test<float>(gen, nanoblas_f32_generic_kernel_4x4, 64);
+	s = run_mult_test<float>(gen, nanoblas_f32_generic_kernel_6x4, 64);
+
+	return s;
+}

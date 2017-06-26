@@ -21,10 +21,10 @@ extern "C" {
 static inline circular_iter_t simple_iter(size_t sum, int base_len) {
 	circular_iter_t it = {
 		.pos = 0,
-		.len = base_len,
+		.len = (size_t)base_len < sum ? base_len : (int)sum,
 		.base_len = base_len,
 		.sum = sum,
-		.slice_len = (size_t)base_len < sum ? base_len : (int)sum,
+		.slice_len = base_len,
 		.dec_pos = sum,
 	};
 	return it;
