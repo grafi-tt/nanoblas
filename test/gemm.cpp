@@ -30,6 +30,7 @@ bool run_test_set(std::mt19937 gen, nanoblas_t nb) {
 }
 
 int main() {
+
 	std::mt19937 gen(314159265);
 
 	nanoblas_t nb;
@@ -49,6 +50,11 @@ int main() {
 	nb.f64_kernel = RK<double>::reference_kernel;
 
 	bool s = false;
+	s = run_test_set(gen, nb) || s;
+
+	nb.f32_kernel = nanoblas_f32_generic_kernel_4x4;
+	nb.f64_kernel = nanoblas_f64_generic_kernel_4x4;
+
 	s = run_test_set(gen, nb) || s;
 
 	return s;

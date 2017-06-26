@@ -1,6 +1,7 @@
 #ifndef NANOBLAS_NANOBLAS_KERNEL_H
 #define NANOBLAS_NANOBLAS_KERNEL_H
 
+#include <stdint.h>
 #include "nanoblas_types.h"
 #include "nanoblas_prepack.h"
 
@@ -41,7 +42,7 @@ struct nanoblas_f32_kernel_state_t {
 	} prepack;
 };
 
-struct nanoblas_f32_kernel_state_former_t {
+struct _nanoblas_f32_kernel_state_former_t {
 	const float *a_pack_cur;
 	const float *b_pack_cur;
 	float *c_cur;
@@ -57,10 +58,10 @@ struct nanoblas_f32_kernel_state_former_t {
 };
 
 static const int nanoblas_f32_current_prepack_a =
-	sizeof(struct nanoblas_f32_kernel_state_former_t);
+	sizeof(struct _nanoblas_f32_kernel_state_former_t);
 
 static const int nanoblas_f32_current_prepack_b =
-	sizeof(struct nanoblas_f32_kernel_state_former_t) + sizeof(nanoblas_f32_prepack_state_t);
+	sizeof(struct _nanoblas_f32_kernel_state_former_t) + sizeof(nanoblas_f32_prepack_state_t);
 
 static inline nanoblas_f32_prepack_state_t *
 nanoblas_f32_current_prepack_p(nanoblas_f32_kernel_state_t *st) {
@@ -105,7 +106,7 @@ struct nanoblas_f64_kernel_state_t {
 	} prepack;
 };
 
-struct nanoblas_f64_kernel_state_former_t {
+struct _nanoblas_f64_kernel_state_former_t {
 	const double *a_pack_cur;
 	const double *b_pack_cur;
 	double *c_cur;
@@ -121,15 +122,15 @@ struct nanoblas_f64_kernel_state_former_t {
 };
 
 static const int nanoblas_f64_current_prepack_a =
-	sizeof(struct nanoblas_f64_kernel_state_former_t);
+	sizeof(struct _nanoblas_f64_kernel_state_former_t);
 
 static const int nanoblas_f64_current_prepack_b =
-	sizeof(struct nanoblas_f64_kernel_state_former_t) + sizeof(nanoblas_f64_prepack_state_t);
+	sizeof(struct _nanoblas_f64_kernel_state_former_t) + sizeof(nanoblas_f64_prepack_state_t);
 
 static inline nanoblas_f64_prepack_state_t *
 nanoblas_f64_current_prepack_p(nanoblas_f64_kernel_state_t *st) {
 	return st->current_prepack == 0 ?
-		NULL : (nanoblas_f64_prepack_state_t *)((char *)st + st->current_prepack);
+		NULL : (nanoblas_f64_prepack_state_t *)((uintptr_t)st + st->current_prepack);
 }
 
 #endif
