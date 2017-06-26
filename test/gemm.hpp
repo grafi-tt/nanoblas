@@ -27,13 +27,15 @@ using impl_t = void (const T *, const T *, T *, size_t, size_t, size_t);
 
 template<typename T>
 bool run_test(std::mt19937 gen, impl_t<T> *impl, size_t M, size_t N, size_t K) {
+	std::uniform_real_distribution<T> dist(0, 1);
+
 	std::vector<T> A(M*K);
 	std::vector<T> B(K*N);
 	std::vector<T> C(M*N);
 	std::vector<T> D(M*N);
 
-	for (auto &&v: A) v = gen();
-	for (auto &&v: B) v = gen();
+	for (auto &&v: A) v = dist(gen);
+	for (auto &&v: B) v = dist(gen);
 
 	auto t1s = std::chrono::high_resolution_clock::now();
 	for (size_t m = 0; m < M; m++)

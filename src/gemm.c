@@ -87,7 +87,7 @@ static void kernel_loop(gemm_state_t *st) {
 	const FTYPE *c_next_cur = st->C_next;
 	for (int i = 0; i < m_slice_len; i++) {
 		__builtin_prefetch(c_next_cur, 1, 0);
-		c_next_cur += st->kernel_st.ldc;
+		c_next_cur = (FTYPE *)((char *)c_next_cur + st->kernel_st.ldc);
 	}
 #endif
 

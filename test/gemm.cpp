@@ -20,8 +20,8 @@ int main() {
 	std::mt19937 gen(314159265);
 
 	bool s = false;
-	s = run_test(gen, &sgemm_impl, 8, 128, 64) || s;
-	s = run_test(gen, &dgemm_impl, 8, 128, 64) || s;
+	s = run_test(gen, &sgemm_impl, 4, 128, 64) || s;
+	s = run_test(gen, &dgemm_impl, 4, 128, 64) || s;
 	s = run_test(gen, &sgemm_impl, 512, 512, 512) || s;
 	s = run_test(gen, &dgemm_impl, 512, 512, 512) || s;
 

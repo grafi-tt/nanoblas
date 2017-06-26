@@ -19,7 +19,7 @@ void generic_kernel_fun(kernel_state_t *kernel_st) {
 			c_buf_cur[j] = i < m_slice_real_len && j < n_slice_real_len ? c_cur[j] : 0;
 		}
 		c_buf_cur += N_SLICE_LEN;
-		c_cur += kernel_st->ldc;
+		c_cur = (FTYPE *)((char *)c_cur + kernel_st->ldc);
 	}
 	c_buf_cur = c_buf;
 	c_cur = kernel_st->c_cur;
@@ -94,7 +94,7 @@ void generic_kernel_fun(kernel_state_t *kernel_st) {
 			}
 		}
 		c_buf_cur += N_SLICE_LEN;
-		c_cur += kernel_st->ldc;
+		c_cur = (FTYPE *)((char *)c_cur + kernel_st->ldc);
 	}
 
 	/* save cur */

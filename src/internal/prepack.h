@@ -59,11 +59,11 @@ static inline void step_prepack(prepack_state_t *st) {
 	if (st->packed_len == st->len) {
 		st->next_cur = (const FTYPE *)((const char *)st->next_bak + st->interval_mn * st->slice_len);
 		st->next_bak = st->next_cur;
-		st->packed_len = 0;
-		st->sched_len = st->max_sched_len;
-
 		st->remained_next_slice_len -= st->slice_len;
 		st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
+
+		st->packed_len = 0;
+		st->sched_len = st->max_sched_len;
 	} else {
 		st->sched_len = imin(st->max_sched_len, st->len - st->packed_len);
 	}
