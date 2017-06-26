@@ -388,18 +388,20 @@ avx_kernel_nopack_loop:
 	// update cursor
 	addq $-128, %r8
 	addq $-128, %r9
-	movq %r8, offset_a_pack_cur(%rcx)
 	movq %r9, offset_b_pack_cur(%rcx)
 
 	// if required, do packing
-	movq offset_current_prepack(%rcx), %rcx
-	test %rcx, %rcx
+	movl offset_current_prepack(%rcx), %ecx
+	testl %ecx, %ecx
 	jz store_c
 	addq %rdx, %rcx
 	call nanoblas_f32_avx_pack_asm
 
 .balign 16
 store_c:
+	// moved here for better alignment
+	movq %r8, offset_a_pack_cur(%rdx)
+
 	// store c
 	// prepare for store
 	movq offset_c_cur(%rdx), %r10
