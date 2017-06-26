@@ -36,10 +36,10 @@ void generic_kernel_fun(kernel_state_t *kernel_st) {
 
 	int slice_pos = 0;
 	int sched_len    = prepack_st->sched_len;
-	const int next_slice_real_len  = prepack_st->next_slice_real_len;
-	const int slice_len       = prepack_st->slice_len;
-	const ptrdiff_t interval_mn  = prepack_st->interval_mn;
-	const ptrdiff_t proceed_k    = prepack_st->interval_k - interval_mn * slice_len;
+	const int next_slice_real_len = prepack_st->next_slice_real_len;
+	const int slice_len           = prepack_st->slice_len;
+	const ptrdiff_t interval_mn   = prepack_st->interval_mn;
+	const ptrdiff_t proceed_k     = prepack_st->interval_k - interval_mn * slice_len;
 
 	k_len -= sched_len * slice_len;
 
@@ -109,10 +109,10 @@ void generic_pack_fun(prepack_state_t *prepack_st) {
 	const FTYPE *restrict next_cur = prepack_st->next_cur;
 	FTYPE *restrict next_pack_cur  = prepack_st->next_pack_cur;
 
-	const int next_slice_real_len  = prepack_st->next_slice_real_len;
-	const int slice_len       = prepack_st->slice_len;
-	const ptrdiff_t interval_mn  = prepack_st->interval_mn;
-	const ptrdiff_t proceed_k    = prepack_st->interval_k - interval_mn * slice_len;
+	const int next_slice_real_len = prepack_st->next_slice_real_len;
+	const int slice_len           = prepack_st->slice_len;
+	const ptrdiff_t interval_mn   = prepack_st->interval_mn;
+	const ptrdiff_t proceed_k     = prepack_st->interval_k - interval_mn * slice_len;
 
 	/* pack */
 	if (slice_len == M_SLICE_LEN) {

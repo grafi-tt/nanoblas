@@ -98,7 +98,7 @@
 #define kernel_t            JOIN(NAMESPACE, FSIZE_PREFIX, kernel_t)
 #define kernel_fun_t        JOIN(NAMESPACE, FSIZE_PREFIX, kernel_fun_t)
 #define pack_fun_t          JOIN(NAMESPACE, FSIZE_PREFIX, pack_fun_t)
-#define max_sched_len_fun_t JOIN(NAMESPACE, FSIZE_PREFIX, max_sched_len_fun_t)
+#define max_sched_len_fun_t JOIN(NAMESPACE, max_sched_len_fun_t)
 #define kernel_state_t      JOIN(NAMESPACE, FSIZE_PREFIX, kernel_state_t)
 #define prepack_state_t     JOIN(NAMESPACE, FSIZE_PREFIX, prepack_state_t)
 /** \} */

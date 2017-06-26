@@ -1,38 +1,26 @@
+#ifndef NANOBLAS_TEST_GEMM_HPP
+#define NANOBLAS_TEST_GEMM_HPP
+
 #include <cstdint>
 #include <chrono>
+#include <functional>
 #include <iostream>
 #include <random>
 #include <vector>
+#include "lib/util.hpp"
+#include "lib/reference_kernel.hpp"
 
-template<typename T>
-constexpr T eps();
+template <typename FTYPE>
+using impl_t = std::function<void(const FTYPE *, const FTYPE *, FTYPE *, size_t, size_t, size_t)>;
 
-template<>
-constexpr float eps() {
-	return 1e-4;
-}
+template<typename FTYPE>
+bool run_test(std::mt19937 gen, const impl_t<FTYPE> &impl, size_t M, size_t N, size_t K) {
+	std::uniform_real_distribution<FTYPE> dist(0, 1);
 
-template<>
-constexpr double eps() {
-	return 1e-8;
-}
-
-template<typename T>
-bool mostly_equal(T x, T y) {
-	return std::abs(x - y) / std::max(std::abs(x), std::abs(y)) < eps<T>();
-}
-
-template <typename T>
-using impl_t = void (const T *, const T *, T *, size_t, size_t, size_t);
-
-template<typename T>
-bool run_test(std::mt19937 gen, impl_t<T> *impl, size_t M, size_t N, size_t K) {
-	std::uniform_real_distribution<T> dist(0, 1);
-
-	std::vector<T> A(M*K);
-	std::vector<T> B(K*N);
-	std::vector<T> C(M*N);
-	std::vector<T> D(M*N);
+	std::vector<FTYPE> A(M*K);
+	std::vector<FTYPE> B(K*N);
+	std::vector<FTYPE> C(M*N);
+	std::vector<FTYPE> D(M*N);
 
 	for (auto &&v: A) v = dist(gen);
 	for (auto &&v: B) v = dist(gen);
@@ -56,8 +44,8 @@ bool run_test(std::mt19937 gen, impl_t<T> *impl, size_t M, size_t N, size_t K) {
 
 	for (size_t i = 0; i < M; i++) {
 		for (size_t j = 0; j < N; j++) {
-			T x = C[N*i+j];
-			T y = D[N*i+j];
+			FTYPE x = C[N*i+j];
+			FTYPE y = D[N*i+j];
 			if (!mostly_equal(x, y)) {
 				std::cerr <<
 					"C["<<i<<"]["<<j<<"] = "<<x<<"; " <<
@@ -69,3 +57,5 @@ bool run_test(std::mt19937 gen, impl_t<T> *impl, size_t M, size_t N, size_t K) {
 
 	return false;
 }
+
+#endif
