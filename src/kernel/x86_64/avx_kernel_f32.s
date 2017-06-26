@@ -255,12 +255,12 @@ nanoblas_f32_avx_kernel_asm:
 	movl offset_m_slice_real_len(%rcx), %eax
 	shll $4, %eax
 	subl offset_n_slice_real_len(%rcx), %eax
-	leaq loadmask(%rip), %r9
-	vmovups (%r9, %rax, 4), %ymm3
+	leaq loadmask(%rip), %rdx
+	vmovups (%rdx, %rax, 4), %ymm3
 	// save ymm3 to ymm0
 	vmovaps %ymm3, %ymm0
 	// ymm1 will be [1.0, ..., 1.0]
-	vmovaps (%r9), %ymm1
+	vmovaps (%rdx), %ymm1
 
 	// load C
 	movq offset_c_cur(%rcx), %r10
@@ -292,31 +292,29 @@ nanoblas_f32_avx_kernel_asm:
 	// loop_len_remained: eax
 	movl offset_k_len(%rcx), %eax
 	// prepare for duff's device
-	movl %eax, %r9d
-	negl %r9d
-	andl $7, %r9d
+	// notice that edx is NULL
+	subl %eax, %edx
+	andl $7, %edx
+	// scale by 16 first
+	shll $4, %edx
+	// prepare for displacement (r9)
+	leaq -128(%rdx, %rdx), %r9
 	// loop length is 16*9
-	// jump address: r10
-	shll $4, %r9d
-	leaq (%r9, %r9, 8), %r8
+	// jump address: rdx
+	leal (%edx, %edx, 8), %edx
 	leaq avx_kernel_nopack_loop(%rip), %r10
-	addq %r8, %r10
-	// multiply displacement by 32, and shift it by 128 for shorter instruction encoding
+	addq %r10, %rdx
+	// displacement multiplied by 32, and shift it by 128 for shorter instruction encoding
 	negq %r9
-	addq %r9, %r9
-	subq $-128, %r9
 	// a_pack_cur: r8
 	// b_pack_cur: r9
 	movq offset_a_pack_cur(%rcx), %r8
 	addq %r9, %r8
 	addq offset_b_pack_cur(%rcx), %r9
-
 	// push jump address
-	push %r10
-	// prepare for store
-	movq offset_c_cur(%rcx), %r10
-	// nop
-.byte 0x0f, 0x1f, 0x40, 0x00
+	pushq %rdx
+	// backup rcx for packing
+	movq %rcx, %rdx
 	// jump to loop
 	jmp *(%rsp)
 	// 16 bytes alinged here
@@ -394,7 +392,6 @@ avx_kernel_nopack_loop:
 	movq %r9, offset_b_pack_cur(%rcx)
 
 	// if required, do packing
-	movq %rcx, %rdx
 	movq offset_current_prepack(%rcx), %rcx
 	test %rcx, %rcx
 	jz store_c
@@ -404,7 +401,8 @@ avx_kernel_nopack_loop:
 .balign 16
 store_c:
 	// store c
-	// c is already on r10
+	// prepare for store
+	movq offset_c_cur(%rdx), %r10
 	// ldc is already on r11
 	vmaskmovps %ymm8, %ymm0, (%r10)
 	vaddps %ymm1, %ymm0, %ymm0
