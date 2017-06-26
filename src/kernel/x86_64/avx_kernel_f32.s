@@ -256,7 +256,7 @@ nanoblas_f32_avx_kernel_asm:
 	shll $4, %eax
 	subl offset_n_slice_real_len(%rcx), %eax
 	leaq loadmask(%rip), %r9
-	vmovups -32(%r9, %rax, 4), %ymm3
+	vmovups (%r9, %rax, 4), %ymm3
 	// save ymm3 to ymm0
 	vmovaps %ymm3, %ymm0
 	// ymm1 will be [1.0, ..., 1.0]
@@ -315,8 +315,9 @@ nanoblas_f32_avx_kernel_asm:
 	push %r10
 	// prepare for store
 	movq offset_c_cur(%rcx), %r10
+	// nop
+.byte 0x0f, 0x1f, 0x40, 0x00
 	// jump to loop
-	nopl (%rax)
 	jmp *(%rsp)
 	// 16 bytes alinged here
 

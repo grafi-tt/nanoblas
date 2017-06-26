@@ -62,7 +62,7 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 		std::cerr << "c_cur is incremented by "<<st.c_cur - d_cur.data()<<", not "<<kernel.n_slice_len << std::endl;
 		s = true;
 	}
-	for (int i = 0; i < kernel.m_slice_len; i++) {
+	for (int i = 0; i < m_slice_real_len; i++) {
 		for (ptrdiff_t j = 0; j < ldc; j++) {
 			FTYPE x = c_cur[ldc*i+j];
 			FTYPE y = d_cur[ldc*i+j];
