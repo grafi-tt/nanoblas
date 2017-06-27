@@ -13,6 +13,8 @@ int main() {
 	s = run_mult_test<float>(gen, nanoblas_f32_generic_kernel_6x4, 64);
 	std::cout << "avx" << std::endl;
 	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 64);
+	std::cout << "avx, duff's device" << std::endl;
+	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 67);
 	std::cout << "avx with 5x5 real len" << std::endl;
 	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 64, 5, 5);
 
