@@ -302,8 +302,8 @@ nanoblas_f32_avx_kernel_asm:
 	// loop length is 16*9
 	// jump address: rdx
 	leal (%edx, %edx, 8), %edx
-	leaq avx_kernel_nopack_loop(%rip), %r10
-	addq %r10, %rdx
+	leaq avx_kernel_nopack_loop(%rip), %r8
+	addq %r8, %rdx
 	// displacement multiplied by 32, and shift it by 128 for shorter instruction encoding
 	negq %r9
 	// a_pack_cur: r8
