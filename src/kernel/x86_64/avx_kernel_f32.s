@@ -94,9 +94,9 @@ nanoblas_f32_avx_pack_asm:
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
 	movl offset_sched_len(%rcx), %eax
 	shll $4, %eax
-	addl offset_next_slice_real_len(%rcx), %eax
+	subl offset_next_slice_real_len(%rcx), %eax
 	leaq loadmask(%rip), %r9
-	vmovups -32(%r9, %rax, 4), %ymm2
+	vmovups (%r9, %rax, 4), %ymm2
 	vmovaps (%r9), %ymm1
 
 	// pack data
@@ -147,9 +147,9 @@ pack_trans:
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
 	movl offset_next_slice_real_len(%rcx), %eax
 	shll $4, %eax
-	addl offset_sched_len(%rcx), %eax
+	subl offset_sched_len(%rcx), %eax
 	leaq loadmask(%rip), %r9
-	vmovups -32(%r9, %rax, 4), %ymm2
+	vmovups (%r9, %rax, 4), %ymm2
 	vmovaps (%r9), %ymm1
 
 	// align stack
@@ -250,15 +250,13 @@ pack_trans:
 .globl nanoblas_f32_avx_kernel_asm
 nanoblas_f32_avx_kernel_asm:
 	// create mask to load C
-	// ymm3 will be [0, ..., 0, -m_slice_real_len, ..., -m_slice_real_len]
+	// ymm0 will be [0, ..., 0, -m_slice_real_len, ..., -m_slice_real_len]
 	//          #(8 - n_slice_real_len)     #n_slice_rean_len
 	movl offset_m_slice_real_len(%rcx), %eax
 	shll $4, %eax
 	subl offset_n_slice_real_len(%rcx), %eax
 	leaq loadmask(%rip), %rdx
-	vmovups (%rdx, %rax, 4), %ymm3
-	// save ymm3 to ymm0
-	vmovaps %ymm3, %ymm0
+	vmovups (%rdx, %rax, 4), %ymm0
 	// ymm1 will be [1.0, ..., 1.0]
 	vmovaps (%rdx), %ymm1
 
@@ -266,28 +264,39 @@ nanoblas_f32_avx_kernel_asm:
 	movq offset_c_cur(%rcx), %r10
 	movq offset_ldc(%rcx), %r11
 	// [ymm8^T, ..., ymm15^T]^T = C (8x8)
-	vmaskmovps (%r10), %ymm3, %ymm8
-	vaddps %ymm1, %ymm3, %ymm3
+	vmaskmovps (%r10), %ymm0, %ymm8
+	// +1
+	vaddps %ymm1, %ymm0, %ymm5
+	vaddps %ymm1, %ymm1, %ymm3
 	addq %r11, %r10
-	vmaskmovps (%r10), %ymm3, %ymm9
-	vaddps %ymm1, %ymm3, %ymm3
+	vmaskmovps (%r10), %ymm5, %ymm9
+	// +2
+	vaddps %ymm3, %ymm0, %ymm6
 	addq %r11, %r10
-	vmaskmovps (%r10), %ymm3, %ymm10
-	vaddps %ymm1, %ymm3, %ymm3
+	vmaskmovps (%r10), %ymm6, %ymm10
+	// +3
+	vaddps %ymm3, %ymm5, %ymm7
+	vaddps %ymm3, %ymm3, %ymm3
 	addq %r11, %r10
-	vmaskmovps (%r10), %ymm3, %ymm11
-	vaddps %ymm1, %ymm3, %ymm3
+	vmaskmovps (%r10), %ymm7, %ymm11
+	// +4
+	vaddps %ymm3, %ymm0, %ymm4
 	addq %r11, %r10
-	vmaskmovps (%r10), %ymm3, %ymm12
-	vaddps %ymm1, %ymm3, %ymm3
+	vmaskmovps (%r10), %ymm4, %ymm12
+	// +5
+	vaddps %ymm3, %ymm5, %ymm5
 	addq %r11, %r10
-	vmaskmovps (%r10), %ymm3, %ymm13
-	vaddps %ymm1, %ymm3, %ymm3
+	vmaskmovps (%r10), %ymm5, %ymm13
+	// +6
+	vaddps %ymm3, %ymm6, %ymm6
 	addq %r11, %r10
-	vmaskmovps (%r10), %ymm3, %ymm14
-	vaddps %ymm1, %ymm3, %ymm3
+	vmaskmovps (%r10), %ymm6, %ymm14
+	// +7
+	vaddps %ymm3, %ymm7, %ymm7
 	addq %r11, %r10
-	vmaskmovps (%r10), %ymm3, %ymm15
+	vmaskmovps (%r10), %ymm7, %ymm15
+	// prepare for store
+	movq offset_c_cur(%rcx), %r10
 
 	// loop_len_remained: eax
 	movl offset_k_len(%rcx), %eax
@@ -298,7 +307,8 @@ nanoblas_f32_avx_kernel_asm:
 	// scale by 16 first
 	shll $4, %edx
 	// prepare for displacement (r9)
-	leaq -128(%rdx, %rdx), %r9
+	leaq (%rdx, %rdx), %r9
+	addq $-128, %r9
 	// loop length is 16*9
 	// jump address: rdx
 	leal (%edx, %edx, 8), %edx
@@ -316,6 +326,7 @@ nanoblas_f32_avx_kernel_asm:
 	// backup rcx for packing
 	movq %rcx, %rdx
 	// jump to loop
+.byte 0x0f, 0x1f, 0x44, 0x00, 0x00
 	jmp *(%rsp)
 	// 16 bytes alinged here
 
@@ -403,31 +414,38 @@ store_c:
 	movq %r8, offset_a_pack_cur(%rdx)
 
 	// store c
-	// prepare for store
-	movq offset_c_cur(%rdx), %r10
 	// ldc is already on r11
 	vmaskmovps %ymm8, %ymm0, (%r10)
-	vaddps %ymm1, %ymm0, %ymm0
+	// +1
+	vaddps %ymm1, %ymm0, %ymm5
+	vaddps %ymm1, %ymm1, %ymm3
 	addq %r11, %r10
-	vmaskmovps %ymm9, %ymm0, (%r10)
-	vaddps %ymm1, %ymm0, %ymm0
+	vmaskmovps %ymm9, %ymm5, (%r10)
+	// +2
+	vaddps %ymm3, %ymm0, %ymm6
 	addq %r11, %r10
-	vmaskmovps %ymm10, %ymm0, (%r10)
-	vaddps %ymm1, %ymm0, %ymm0
+	vmaskmovps %ymm10, %ymm6, (%r10)
+	// +3
+	vaddps %ymm3, %ymm5, %ymm7
+	vaddps %ymm3, %ymm3, %ymm3
 	addq %r11, %r10
-	vmaskmovps %ymm11, %ymm0, (%r10)
-	vaddps %ymm1, %ymm0, %ymm0
+	vmaskmovps %ymm11, %ymm7, (%r10)
+	// +4
+	vaddps %ymm3, %ymm0, %ymm4
 	addq %r11, %r10
-	vmaskmovps %ymm12, %ymm0, (%r10)
-	vaddps %ymm1, %ymm0, %ymm0
+	vmaskmovps %ymm12, %ymm4, (%r10)
+	// +5
+	vaddps %ymm3, %ymm5, %ymm5
 	addq %r11, %r10
-	vmaskmovps %ymm13, %ymm0, (%r10)
-	vaddps %ymm1, %ymm0, %ymm0
+	vmaskmovps %ymm13, %ymm5, (%r10)
+	// +6
+	vaddps %ymm3, %ymm6, %ymm6
 	addq %r11, %r10
-	vmaskmovps %ymm14, %ymm0, (%r10)
-	vaddps %ymm1, %ymm0, %ymm0
+	vmaskmovps %ymm14, %ymm6, (%r10)
+	// +7
+	vaddps %ymm3, %ymm7, %ymm7
 	addq %r11, %r10
-	vmaskmovps %ymm15, %ymm0, (%r10)
+	vmaskmovps %ymm15, %ymm7, (%r10)
 
 	// update c_cur
 	add $32, offset_c_cur(%rdx)
