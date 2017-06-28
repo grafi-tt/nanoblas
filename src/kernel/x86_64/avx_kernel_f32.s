@@ -19,64 +19,12 @@
 
 .section .text
 .balign 32
-loadmask:
-// [1.0, ..., 1.0]
-.rept 8
-.float 1
-.endr
-// [-1.0, ..., -1.0, 0, ..., 0]
+// [-1.0, ..., -1.0]
 .rept 8
 .float -1
 .endr
-.rept 8
-.float 0
-.endr
-// [-2.0, ..., -2.0, 0, ..., 0]
-.rept 8
-.float -2
-.endr
-.rept 8
-.float 0
-.endr
-// [-3.0, ..., -3.0, 0, ..., 0]
-.rept 8
-.float -3
-.endr
-.rept 8
-.float 0
-.endr
-// [-4.0, ..., -4.0, 0, ..., 0]
-.rept 8
-.float -4
-.endr
-.rept 8
-.float 0
-.endr
-// [-5.0, ..., -5.0, 0, ..., 0]
-.rept 8
-.float -5
-.endr
-.rept 8
-.float 0
-.endr
-// [-6.0, ..., -6.0, 0, ..., 0]
-.rept 8
-.float -6
-.endr
-.rept 8
-.float 0
-.endr
-// [-7.0, ..., -7.0, 0, ..., 0]
-.rept 8
-.float -7
-.endr
-.rept 8
-.float 0
-.endr
-// [-8.0, ..., -8.0, 0, ..., 0]
-.rept 8
-.float -8
-.endr
+loadmask:
+// [0.0, ..., 0.0]
 .rept 8
 .float 0
 .endr
@@ -84,71 +32,83 @@ loadmask:
 .globl nanoblas_f32_avx_kernel_asm
 nanoblas_f32_avx_kernel_asm:
 	// create mask to load C
-	// ymm0 will be [0, ..., 0, -m_slice_real_len, ..., -m_slice_real_len]
-	//          #(8 - n_slice_real_len)     #n_slice_rean_len
-	movl offset_m_slice_real_len(%rcx), %eax
-	shll $4, %eax
-	subl offset_n_slice_real_len(%rcx), %eax
+	// ymm0 will be [0, ..., 0, -1, ..., -1]
+	/   #(8 - n_slice_real_len) #n_slice_rean_len
+	movl offset_n_slice_real_len(%rcx), %eax
+	negq %rax
 	leaq loadmask(%rip), %rdx
 	vmovups (%rdx, %rax, 4), %ymm0
-	// ymm1 will be [1.0, ..., 1.0]
-	vmovaps (%rdx), %ymm1
+
+	// load limit
+	movl offset_m_slice_real_len(%rcx), %eax
 
 	// load C
-	movq offset_c_cur(%rcx), %r10
+	movq offset_c_cur(%rcx), %r8
 	movq offset_ldc(%rcx), %r11
+	// backup C addressing
+	movq %r8, %r10
 	// [ymm8^T, ..., ymm15^T]^T = C (8x8)
-	vmaskmovps (%r10), %ymm0, %ymm8
-	// +1
-	vaddps %ymm1, %ymm0, %ymm5
-	vaddps %ymm1, %ymm1, %ymm3
-	addq %r11, %r10
-	vmaskmovps (%r10), %ymm5, %ymm9
-	// +2
-	vaddps %ymm3, %ymm0, %ymm6
-	addq %r11, %r10
-	vmaskmovps (%r10), %ymm6, %ymm10
-	// +3
-	vaddps %ymm3, %ymm5, %ymm7
-	vaddps %ymm3, %ymm3, %ymm3
-	addq %r11, %r10
-	vmaskmovps (%r10), %ymm7, %ymm11
-	// +4
-	vaddps %ymm3, %ymm0, %ymm4
-	addq %r11, %r10
-	vmaskmovps (%r10), %ymm4, %ymm12
-	// +5
-	vaddps %ymm3, %ymm5, %ymm5
-	addq %r11, %r10
-	vmaskmovps (%r10), %ymm5, %ymm13
-	// +6
-	vaddps %ymm3, %ymm6, %ymm6
-	addq %r11, %r10
-	vmaskmovps (%r10), %ymm6, %ymm14
-	// +7
-	vaddps %ymm3, %ymm7, %ymm7
-	addq %r11, %r10
-	vmaskmovps (%r10), %ymm7, %ymm15
-	// prepare for store
-	movq offset_c_cur(%rcx), %r10
+	vmaskmovps (%r8), %ymm0, %ymm8
+	// constant
+	mov $1, %edx
+	// -1
+	addq %r11, %r8
+	movq %r8, %r9
+	subl %edx, %eax
+	cmovle %rsp, %r9
+	vmaskmovps (%r9), %ymm0, %ymm9
+	// -2
+	addq %r11, %r8
+	movq %r8, %r9
+	subl %edx, %eax
+	cmovle %rsp, %r9
+	vmaskmovps (%r9), %ymm0, %ymm10
+	// -3
+	addq %r11, %r8
+	movq %r8, %r9
+	subl %edx, %eax
+	cmovle %rsp, %r9
+	vmaskmovps (%r9), %ymm0, %ymm11
+	// -4
+	addq %r11, %r8
+	movq %r8, %r9
+	subl %edx, %eax
+	cmovle %rsp, %r9
+	vmaskmovps (%r9), %ymm0, %ymm12
+	// -5
+	addq %r11, %r8
+	movq %r8, %r9
+	subl %edx, %eax
+	cmovle %rsp, %r9
+	vmaskmovps (%r9), %ymm0, %ymm13
+	// -6
+	addq %r11, %r8
+	movq %r8, %r9
+	subl %edx, %eax
+	cmovle %rsp, %r9
+	vmaskmovps (%r9), %ymm0, %ymm14
+	// -7
+	addq %r11, %r8
+	subl %edx, %eax
+	cmovle %rsp, %r8
+	vmaskmovps (%r8), %ymm0, %ymm15
 
 	// loop_len_remained: eax
 	movl offset_k_len(%rcx), %eax
 	// prepare for duff's device
-	// notice that edx is NULL
+	xorl %edx, %edx
 	subl %eax, %edx
 	andl $7, %edx
 	// scale by 16 first
 	shll $4, %edx
 	// prepare for displacement (r9)
-	leaq (%rdx, %rdx), %r9
-	addq $-128, %r9
+	leaq -128(%rdx, %rdx), %r9
 	// loop length is 16*9
 	// jump address: rdx
 	leal (%edx, %edx, 8), %edx
 	leaq avx_kernel_nopack_loop(%rip), %r8
 	addq %r8, %rdx
-	// displacement multiplied by 32, and shift it by 128 for shorter instruction encoding
+	// displacement multiplied by 32, and incremented by 128 for shorter instruction encoding
 	negq %r9
 	// a_pack_cur: r8
 	// b_pack_cur: r9
@@ -157,10 +117,8 @@ nanoblas_f32_avx_kernel_asm:
 	addq offset_b_pack_cur(%rcx), %r9
 	// push jump address
 	pushq %rdx
-	// backup rcx for packing
-	movq %rcx, %rdx
 	// jump to loop
-.byte 0x0f, 0x1f, 0x44, 0x00, 0x00
+	nop
 	jmp *(%rsp)
 	// 16 bytes alinged here
 
@@ -239,48 +197,66 @@ avx_kernel_nopack_loop:
 store_c:
 	// moved here for better alignment
 	movq %r8, offset_a_pack_cur(%rcx)
+	// load limit again
+	movl offset_m_slice_real_len(%rcx), %eax
 
+	// space to put garbage
+	subq $32, %rsp
 	// store c
+	// C is already on r10
 	// ldc is already on r11
 	vmaskmovps %ymm8, %ymm0, (%r10)
 	// +1
-	vaddps %ymm1, %ymm0, %ymm5
-	vaddps %ymm1, %ymm1, %ymm3
 	addq %r11, %r10
-	vmaskmovps %ymm9, %ymm5, (%r10)
+	movq %r10, %rdx
+	subl $1, %eax
+	cmovle %rsp, %rdx
+	vmaskmovps %ymm9, %ymm0, (%rdx)
 	// +2
-	vaddps %ymm3, %ymm0, %ymm6
 	addq %r11, %r10
-	vmaskmovps %ymm10, %ymm6, (%r10)
+	movq %r10, %rdx
+	subl $1, %eax
+	cmovle %rsp, %rdx
+	vmaskmovps %ymm10, %ymm0, (%rdx)
 	// +3
-	vaddps %ymm3, %ymm5, %ymm7
-	vaddps %ymm3, %ymm3, %ymm3
 	addq %r11, %r10
-	vmaskmovps %ymm11, %ymm7, (%r10)
+	movq %r10, %rdx
+	subl $1, %eax
+	cmovle %rsp, %rdx
+	vmaskmovps %ymm11, %ymm0, (%rdx)
 	// +4
-	vaddps %ymm3, %ymm0, %ymm4
 	addq %r11, %r10
-	vmaskmovps %ymm12, %ymm4, (%r10)
+	movq %r10, %rdx
+	subl $1, %eax
+	cmovle %rsp, %rdx
+	vmaskmovps %ymm12, %ymm0, (%rdx)
 	// +5
-	vaddps %ymm3, %ymm5, %ymm5
 	addq %r11, %r10
-	vmaskmovps %ymm13, %ymm5, (%r10)
+	movq %r10, %rdx
+	subl $1, %eax
+	cmovle %rsp, %rdx
+	vmaskmovps %ymm13, %ymm0, (%rdx)
 	// +6
-	vaddps %ymm3, %ymm6, %ymm6
 	addq %r11, %r10
-	vmaskmovps %ymm14, %ymm6, (%r10)
+	movq %r10, %rdx
+	subl $1, %eax
+	cmovle %rsp, %rdx
+	vmaskmovps %ymm14, %ymm0, (%rdx)
 	// +7
-	vaddps %ymm3, %ymm7, %ymm7
 	addq %r11, %r10
-	vmaskmovps %ymm15, %ymm7, (%r10)
+	subl $1, %eax
+	cmovle %rsp, %r10
+	vmaskmovps %ymm15, %ymm0, (%r10)
+	// restore rsp before jump
+	addq $32, %rsp
 
 	// update c_cur
 	addq $32, offset_c_cur(%rcx)
 
 	// if required, do packing
-	movl offset_current_prepack(%rcx), %ecx
-	addq %rcx, %rdx
-	testl %ecx, %ecx
+	movl offset_current_prepack(%rcx), %edx
+	addq %rdx, %rcx
+	testl %edx, %edx
 	jnz nanoblas_f32_avx_pack_asm
 
 	ret
@@ -294,79 +270,70 @@ nanoblas_f32_avx_pack_asm:
 	cmpq $4, %r9
 	je pack_trans
 
-	// ymm0 will be the template of load mask
-	// ymm1 is [1.0, ..., 1.0]
+	// ymm0 will the load mask
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
-	xorl %eax, %eax
-	subl offset_next_slice_real_len(%rcx), %eax
-	cdqe
+	movl offset_next_slice_real_len(%rcx), %eax
+	negq %rax
 	leaq loadmask(%rip), %rdx
-	vmovups 128(%rdx, %rax, 4), %ymm0
-	vmovaps (%rdx), %ymm1
+	vmovups (%rdx, %rax, 4), %ymm0
 
-	// aga
-	xorl %eax, %eax
-	subl offset_sched_len(%rcx), %eax
-	cdqe
+	// load limit
+	movl offset_sched_len(%rcx), %eax
 
 	// pack data
+	// rdx is zero
+	xorl %edx, %edx
 	// ymm8 is the temporary
 	mov %r9, %r11
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, (%r10)
 	// +1
-	addq $1, %rax
-	cqo
-	andq %rdx, %r9
+	subl $1, %eax
+	cmovle %rdx, %r9
 	addq %r9, %r8
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, 32(%r10)
 	// +2
-	addq $1, %rax
-	cqo
-	andq %rdx, %r9
+	subl $1, %eax
+	cmovle %rdx, %r9
 	addq %r9, %r8
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, 64(%r10)
 	// +3
-	addq $1, %rax
-	cqo
-	andq %rdx, %r9
+	subl $1, %eax
+	cmovle %rdx, %r9
 	addq %r9, %r8
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, 96(%r10)
 	// incr r10
 	addq $256, %r10
 	// +4
-	addq $1, %rax
-	cqo
-	andq %rdx, %r9
+	subl $1, %eax
+	cmovle %rdx, %r9
 	addq %r9, %r8
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, -128(%r10)
 	// +5
-	addq $1, %rax
-	cqo
-	andq %rdx, %r9
+	subl $1, %eax
+	cmovle %rdx, %r9
 	addq %r9, %r8
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, -96(%r10)
 	// +6
-	addq $1, %rax
-	cqo
-	andq %rdx, %r9
+	subl $1, %eax
+	cmovle %rdx, %r9
 	addq %r9, %r8
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, -64(%r10)
 	// +7
-	addq $1, %rax
-	cqo
-	andq %rdx, %r9
+	subl $1, %eax
+	cmovle %rdx, %r9
 	addq %r9, %r8
 	vmaskmovps (%r8), %ymm0, %ymm8
 	vmovaps %ymm8, -32(%r10)
-
+	// correct next_cur ptr
 	addq %r11, %r8
+	// save cur
 	movq %r8, offset_next_cur(%rcx)
 	movq %r10, offset_next_pack_cur(%rcx)
 
@@ -374,59 +341,79 @@ nanoblas_f32_avx_pack_asm:
 
 .balign 16
 pack_trans:
+	// space to put garbage
+	subq $32, %rsp
+
 	movq offset_interval_mn(%rcx), %r9
 
-	// ymm0 will be the template of load mask
-	// ymm1 is [1.0, ..., 1.0]
+	// ymm0 will be the load mask
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
-	movl offset_next_slice_real_len(%rcx), %eax
-	shll $6, %eax
-	movl offset_sched_len(%rcx), %edx
-	addl %edx, %edx
-	addl %edx, %edx
+	movl offset_sched_len(%rcx), %eax
+	addl %eax, %eax
+	addl %eax, %eax
 	// update next_cur first
-	leaq (%r8, %rdx), %r11
+	leaq (%r8, %rax), %r11
 	movq %r11, offset_next_cur(%rcx)
 	// get mask
-	subl %edx, %eax
+	negq %rax
 	leaq loadmask(%rip), %rdx
 	vmovups (%rdx, %rax), %ymm0
-	vmovaps (%rdx), %ymm1
 
 	// incr next_pack_cur
 	leaq 256(%r10), %r11
 
+	// load limit
+	movl offset_next_slice_real_len(%rcx), %eax
+
 	// load
 	vmaskmovps (%r8), %ymm0, %ymm8
 	// +1
-	vaddps %ymm1, %ymm0, %ymm5
-	vaddps %ymm1, %ymm1, %ymm3
 	addq %r9, %r8
+	movq %r8, %rdx
+	subl $1, %eax
+	cmovl %rsp, %rdx
 	vmaskmovps (%r8), %ymm5, %ymm9
 	// +2
 	vaddps %ymm3, %ymm0, %ymm6
 	addq %r9, %r8
-	vmaskmovps (%r8), %ymm6, %ymm10
+	movq %r8, %rdx
+	subl $1, %eax
+	cmovl %rsp, %rdx
+	vmaskmovps (%rdx), %ymm6, %ymm10
 	// +3
 	vaddps %ymm3, %ymm5, %ymm7
 	vaddps %ymm3, %ymm3, %ymm3
 	addq %r9, %r8
-	vmaskmovps (%r8), %ymm7, %ymm11
+	movq %r8, %rdx
+	subl $1, %eax
+	cmovl %rsp, %rdx
+	vmaskmovps (%rdx), %ymm7, %ymm11
 	// +4
 	vaddps %ymm3, %ymm0, %ymm4
 	addq %r9, %r8
-	vmaskmovps (%r8), %ymm4, %ymm12
+	movq %r8, %rdx
+	subl $1, %eax
+	cmovl %rsp, %rdx
+	vmaskmovps (%rdx), %ymm4, %ymm12
 	// +5
 	vaddps %ymm3, %ymm5, %ymm5
 	addq %r9, %r8
-	vmaskmovps (%r8), %ymm5, %ymm13
+	movq %r8, %rdx
+	subl $1, %eax
+	cmovl %rsp, %rdx
+	vmaskmovps (%rdx), %ymm5, %ymm13
 	// +6
 	vaddps %ymm3, %ymm6, %ymm6
 	addq %r9, %r8
-	vmaskmovps (%r8), %ymm6, %ymm14
+	movq %r8, %rdx
+	subl $1, %eax
+	cmovl %rsp, %rdx
+	vmaskmovps (%rdx), %ymm6, %ymm14
 	// +7
 	vaddps %ymm1, %ymm7, %ymm7
 	addq %r9, %r8
+	subl $1, %eax
+	cmovl %rsp, %r8
 	vmaskmovps (%r8), %ymm7, %ymm15
 
 	// save cur
@@ -494,4 +481,5 @@ pack_trans:
 	vperm2f128 $0x31, %ymm11, %ymm10, %ymm15
 	vmovaps %ymm15, -32(%r11)
 
+	addq $32, %rsp
 	ret
