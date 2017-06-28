@@ -366,55 +366,47 @@ pack_trans:
 	movl offset_next_slice_real_len(%rcx), %eax
 
 	// load
-	vmaskmovps (%r8), %ymm0, %ymm8
 	// +1
 	addq %r9, %r8
 	movq %r8, %rdx
 	subl $1, %eax
 	cmovl %rsp, %rdx
-	vmaskmovps (%r8), %ymm5, %ymm9
+	vmaskmovps (%r8), %ymm0, %ymm9
 	// +2
-	vaddps %ymm3, %ymm0, %ymm6
 	addq %r9, %r8
 	movq %r8, %rdx
 	subl $1, %eax
 	cmovl %rsp, %rdx
-	vmaskmovps (%rdx), %ymm6, %ymm10
+	vmaskmovps (%rdx), %ymm0, %ymm10
 	// +3
-	vaddps %ymm3, %ymm5, %ymm7
-	vaddps %ymm3, %ymm3, %ymm3
 	addq %r9, %r8
 	movq %r8, %rdx
 	subl $1, %eax
 	cmovl %rsp, %rdx
-	vmaskmovps (%rdx), %ymm7, %ymm11
+	vmaskmovps (%rdx), %ymm0, %ymm11
 	// +4
-	vaddps %ymm3, %ymm0, %ymm4
 	addq %r9, %r8
 	movq %r8, %rdx
 	subl $1, %eax
 	cmovl %rsp, %rdx
-	vmaskmovps (%rdx), %ymm4, %ymm12
+	vmaskmovps (%rdx), %ymm0, %ymm12
 	// +5
-	vaddps %ymm3, %ymm5, %ymm5
 	addq %r9, %r8
 	movq %r8, %rdx
 	subl $1, %eax
 	cmovl %rsp, %rdx
-	vmaskmovps (%rdx), %ymm5, %ymm13
+	vmaskmovps (%rdx), %ymm0, %ymm13
 	// +6
-	vaddps %ymm3, %ymm6, %ymm6
 	addq %r9, %r8
 	movq %r8, %rdx
 	subl $1, %eax
 	cmovl %rsp, %rdx
-	vmaskmovps (%rdx), %ymm6, %ymm14
+	vmaskmovps (%rdx), %ymm0, %ymm14
 	// +7
-	vaddps %ymm1, %ymm7, %ymm7
 	addq %r9, %r8
 	subl $1, %eax
 	cmovl %rsp, %r8
-	vmaskmovps (%r8), %ymm7, %ymm15
+	vmaskmovps (%r8), %ymm0, %ymm15
 
 	// save cur
 	movq %r11, offset_next_pack_cur(%rcx)
