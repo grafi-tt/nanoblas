@@ -16,8 +16,8 @@ struct nanoblas_f32_prepack_state_t {
 	/* internal */
 	int len;
 	int packed_len;
-	int remained_next_slice_len;
 	int max_sched_len;
+	int remained_next_slice_len;
 	int dummy;
 	const float *next_bak;
 };

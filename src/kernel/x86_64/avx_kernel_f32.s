@@ -150,15 +150,21 @@ nanoblas_f32_avx_pack_asm:
 	ret
 
 .balign 16
-ack_trans:
+pack_trans:
 	movq offset_interval_k(%rcx), %r9
 
 	// ymm0 will be the template of load mask
 	// ymm1 is [1.0, ..., 1.0]
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
 	movl offset_next_slice_real_len(%rcx), %eax
-	shll $4, %eax
-	subl offset_sched_len(%rcx), %eax
+	shll $6, %eax
+	movl offset_sched_len(%rcx), %edx
+	shll $2, %edx
+	// update next_cur first
+	leaq (%r8, %rdx), %r11
+	movq %r11, offset_next_cur(%rcx)
+	// get mask
+	subl %edx, %eax
 	leaq loadmask(%rip), %rdx
 	vmovups (%rdx, %rax, 4), %ymm0
 	vmovaps (%rdx), %ymm1
@@ -200,7 +206,6 @@ ack_trans:
 	vmaskmovps (%r8), %ymm7, %ymm15
 
 	// save cur
-	movq %r8, offset_next_cur(%rcx)
 	movq %r11, offset_next_pack_cur(%rcx)
 
 	// transpose algorithm is from
