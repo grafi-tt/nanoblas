@@ -7,8 +7,14 @@
 extern "C" {
 #endif
 
-nanoblas_f32_kernel_fun_t nanoblas_f32_avx_kernel_fun;
-extern nanoblas_f32_kernel_t nanoblas_f32_avx_kernel;
+nanoblas_f32_kernel_mult_t nanoblas_f32_avx_kernel_mult;
+nanoblas_f32_kernel_pack_t nanoblas_f32_avx_kernel_pack;
+
+const nanoblas_f32_kernel_t nanoblas_f32_avx_kernel = {
+	&nanoblas_f32_avx_kernel_mult,
+	&nanoblas_f32_avx_kernel_pack,
+	8, 8, 8
+};
 
 #ifdef __cplusplus
 }

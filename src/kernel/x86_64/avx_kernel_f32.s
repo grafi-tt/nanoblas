@@ -14,8 +14,8 @@
 .set offset_interval_mn,         16
 .set offset_interval_k,          24
 .set offset_slice_len,           32
-.set offset_next_slice_real_len, 36
-.set offset_sched_len,           40
+.set offset_remained_len,        36
+.set offset_next_slice_real_len, 40
 
 .section .text
 .balign 32
@@ -29,8 +29,8 @@ loadmask:
 .float 0
 .endr
 
-.globl nanoblas_f32_avx_kernel_asm
-nanoblas_f32_avx_kernel_asm:
+.globl nanoblas_f32_avx_kernel_mult_asm
+nanoblas_f32_avx_kernel_mult_asm:
 	// create mask to load C
 	// ymm0 will be [0, ..., 0, -1, ..., -1]
 	/   #(8 - n_slice_real_len) #n_slice_rean_len
@@ -106,7 +106,7 @@ nanoblas_f32_avx_kernel_asm:
 	// loop length is 16*9
 	// jump address: rdx
 	leal (%edx, %edx, 8), %edx
-	leaq avx_kernel_nopack_loop(%rip), %r8
+	leaq avx_kernel_mult_nopack_loop(%rip), %r8
 	addq %r8, %rdx
 	// displacement multiplied by 32, and incremented by 128 for shorter instruction encoding
 	negq %r9
@@ -122,7 +122,7 @@ nanoblas_f32_avx_kernel_asm:
 	jmp *(%rsp)
 	// 16 bytes alinged here
 
-avx_kernel_nopack_loop:
+avx_kernel_mult_nopack_loop:
 
 .macro unroll cnt=0, times
 	.balign 16
@@ -184,7 +184,7 @@ avx_kernel_nopack_loop:
 .endm
 
 	unroll times=8
-	jg avx_kernel_nopack_loop
+	jg avx_kernel_mult_nopack_loop
 	addq $8, %rsp
 	// loop end
 
@@ -257,28 +257,37 @@ store_c:
 	movl offset_current_prepack(%rcx), %edx
 	addq %rdx, %rcx
 	testl %edx, %edx
-	jnz nanoblas_f32_avx_pack_asm
+	jnz nanoblas_f32_avx_kernel_pack_asm
 
 	ret
 
 .balign 16
-.globl nanoblas_f32_avx_pack_asm
-nanoblas_f32_avx_pack_asm:
+.globl nanoblas_f32_avx_kernel_pack_asm
+nanoblas_f32_avx_kernel_pack_asm:
 	movq offset_next_cur(%rcx), %r8
 	movq offset_interval_k(%rcx), %r9
 	movq offset_next_pack_cur(%rcx), %r10
+
+	// check remained len and take 8 or less
+	movl offset_remained_len(%rcx), %eax
+	movl %eax, %r11d
+	movl $8, %edx
+	subl %edx, %r11d
+	cmovge %edx, %eax
+	movl %r11d, offset_remained_len(%rcx)
+
+	// check trans
 	cmpq $4, %r9
 	je pack_trans
 
 	// ymm0 will the load mask
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
-	movl offset_next_slice_real_len(%rcx), %eax
-	negq %rax
+	movl offset_next_slice_real_len(%rcx), %r11d
+	negq %r11
 	leaq loadmask(%rip), %rdx
-	vmovups (%rdx, %rax, 4), %ymm0
+	vmovups (%rdx, %r11, 4), %ymm0
 
-	// load limit
-	movl offset_sched_len(%rcx), %eax
+	// limit already on eax
 
 	// pack data
 	// rdx is zero
@@ -348,7 +357,7 @@ pack_trans:
 
 	// ymm0 will be the load mask
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
-	movl offset_sched_len(%rcx), %eax
+	// sched_len is already on eax
 	addl %eax, %eax
 	addl %eax, %eax
 	// update next_cur first

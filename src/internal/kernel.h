@@ -11,18 +11,18 @@ extern "C" {
 #endif
 
 #define swap_a_pack JOIN(NAMESPACE, FSIZE_PREFIX, swap_a_pack)
-static inline void swap_a_pack(kernel_state_t *st, pack_fun_t *pack_fun) {
+static inline void swap_a_pack(kernel_state_t *st, kernel_pack_t *kernel_pack) {
 	st->current_prepack = current_prepack_a;
-	pack_slice(current_prepack_p(st), pack_fun);
+	pack_slice(current_prepack_p(st), kernel_pack);
 	fswap(&st->a_pack, &st->a_next_pack);
 	st->a_pack_cur                  = st->a_pack;
 	st->prepack.mem.a_next_pack_cur = st->a_next_pack;
 }
 
 #define swap_b_pack JOIN(NAMESPACE, FSIZE_PREFIX, swap_b_pack)
-static inline void swap_b_pack(kernel_state_t *st, pack_fun_t *pack_fun) {
+static inline void swap_b_pack(kernel_state_t *st, kernel_pack_t *kernel_pack) {
 	st->current_prepack = current_prepack_b;
-	pack_all(current_prepack_p(st), pack_fun);
+	pack_all(current_prepack_p(st), kernel_pack);
 	fswap(&st->b_pack, &st->b_next_pack);
 	st->b_pack_cur                  = st->b_pack;
 	st->prepack.mem.b_next_pack_cur = st->b_next_pack;
@@ -42,7 +42,7 @@ static inline kernel_state_t kernel_state_new(
 		size_t interval_m, size_t interval_n, size_t interval_k_in_a, size_t interval_k_in_b, size_t ldc,
 		FTYPE *a_pack, FTYPE *a_next_pack, FTYPE *b_pack, FTYPE *b_next_pack,
 		int m_slice_len, int n_slice_len,
-		int m_slice_len_limit, int n_slice_len_limit, int k_len, int a_max_sched_len, int b_max_sched_len) {
+		int m_slice_len_limit, int n_slice_len_limit, int k_len) {
 
 	kernel_state_t st = {
 		.a_pack      = a_pack,
@@ -52,9 +52,9 @@ static inline kernel_state_t kernel_state_new(
 		.ldc         = sizeof(FTYPE) * ldc,
 		.k_len       = k_len,
 		.prepack.sel.a = prepack_state_new(
-				a, a_next_pack, m_slice_len, m_slice_len_limit, k_len, a_max_sched_len, interval_m, interval_k_in_a),
+				a, a_next_pack, m_slice_len, m_slice_len_limit, k_len, interval_m, interval_k_in_a),
 		.prepack.sel.b = prepack_state_new(
-				b, b_next_pack, n_slice_len, n_slice_len_limit, k_len, b_max_sched_len, interval_n, interval_k_in_b),
+				b, b_next_pack, n_slice_len, n_slice_len_limit, k_len, interval_n, interval_k_in_b),
 	};
 	return st;
 }

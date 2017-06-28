@@ -3,16 +3,12 @@
 #include "kernel/generic_kernel.h"
 #include "lib/reference_kernel.hpp"
 
-template<typename FTYPE>
-void max_sched_len_fun1(int len, int *a_max_sched_len, int *b_max_sched_len) {
-	if (a_max_sched_len) *a_max_sched_len = len / RK<FTYPE>::reference_kernel.m_slice_len;
-	if (b_max_sched_len) *b_max_sched_len = len / RK<FTYPE>::reference_kernel.n_slice_len;
-}
+using namespace nanoblas;
 
 template<typename FTYPE>
 impl_t<FTYPE> get_gemm_impl(const nanoblas_t &nb) {
 	return [=](const FTYPE *A, const FTYPE *B, FTYPE *C, size_t M, size_t N, size_t K, size_t lda, size_t ldb, size_t ldc) {
-		nanoblas::gemm<FTYPE>(nb, CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1, A, lda, B, ldb, 1, C, ldc);
+		gemm<FTYPE>(nb, CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1, A, lda, B, ldb, 1, C, ldc);
 	};
 }
 
@@ -44,16 +40,9 @@ int main() {
 	nb.f64_blk_n_max_len = 128;
 	nb.f64_blk_k_max_len = 128;
 
-	RK<float>::reference_kernel.m_slice_len = 4;
-	RK<float>::reference_kernel.n_slice_len = 4;
-	RK<float>::reference_kernel.max_sched_len_fun = max_sched_len_fun1<float>;
-	RK<double>::reference_kernel.m_slice_len = 4;
-	RK<double>::reference_kernel.n_slice_len = 4;
-	RK<double>::reference_kernel.max_sched_len_fun = max_sched_len_fun1<double>;
-
 	std::cout << "reference 4x4" << std::endl;
-	nb.f32_kernel = RK<float>::reference_kernel;
-	nb.f64_kernel = RK<double>::reference_kernel;
+	nb.f32_kernel = get_reference_kernel<float, 4, 4>();
+	nb.f64_kernel = get_reference_kernel<double, 4, 4>();
 
 	bool s = false;
 	s = run_test_set(gen, nb) || s;

@@ -9,6 +9,8 @@
 #include <vector>
 #include "lib/util.hpp"
 
+namespace nanoblas {
+
 template<typename FTYPE>
 using impl_t = std::function<void(const FTYPE *, const FTYPE *, FTYPE *, size_t, size_t, size_t, size_t, size_t, size_t)>;
 
@@ -63,6 +65,8 @@ bool run_test(std::mt19937 gen, const impl_t<FTYPE> &impl, size_t M, size_t N, s
 template<typename FTYPE>
 bool run_test(std::mt19937 gen, const impl_t<FTYPE> &impl, size_t M, size_t N, size_t K) {
 	return run_test(gen, impl, M, N, K, K, N, N);
+}
+
 }
 
 #endif

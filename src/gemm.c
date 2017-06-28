@@ -21,9 +21,8 @@ typedef struct {
 	const FTYPE *B_next_k;
 	FTYPE *const C;
 	FTYPE *C_next;
-	kernel_fun_t *const kernel_fun;
-	pack_fun_t *const pack_fun;
-	max_sched_len_fun_t *const max_sched_len_fun;
+	kernel_mult_t *const kernel_mult;
+	kernel_pack_t *const kernel_pack;
 	kernel_state_t kernel_st;
 	circular_iter_t *const m_it;
 	circular_iter_t *const m_it_bak;
@@ -34,52 +33,71 @@ typedef struct {
 } gemm_state_t;
 
 static void k_step(gemm_state_t *st) {
-	st->A_pos = (const FTYPE *)((const char *)
+	st->A_pos = (const FTYPE *)((uintptr_t)
 			st->A + st->kernel_st.prepack.mem.interval_k_in_a * st->k_it_bak->pos);
-	st->A_next_k = (const FTYPE *)((const char *)
+	st->A_next_k = (const FTYPE *)((uintptr_t)
 			st->A + st->kernel_st.prepack.mem.interval_k_in_a * st->k_it->pos);
-	st->B_next_k = (const FTYPE *)((const char *)
+	st->B_next_k = (const FTYPE *)((uintptr_t)
 			st->B + st->kernel_st.prepack.mem.interval_k_in_b * st->k_it->pos);
 }
 
 static void n_step(gemm_state_t *st) {
-	swap_b_pack(&st->kernel_st, st->pack_fun);
+	swap_b_pack(&st->kernel_st, st->kernel_pack);
+}
+
+static void n_step_border(gemm_state_t *st) {
+	swap_b_pack(&st->kernel_st, st->kernel_pack);
 	limit_prepack(current_prepack_p(&st->kernel_st), st->n_it->len);
 }
 
 static void last_n_step_before_k(gemm_state_t *st) {
-	int b_max_sched_len;
-	st->max_sched_len_fun(st->k_it->len, NULL, &b_max_sched_len);
-	reset_prepack(current_prepack_p(&st->kernel_st), st->B_next_k, st->n_it->len, st->k_it->len, b_max_sched_len);
+	swap_b_pack(&st->kernel_st, st->kernel_pack);
+	reset_prepack(current_prepack_p(&st->kernel_st), st->B_next_k, st->n_it->len, st->k_it->len);
 }
 
 static void last_n_step(gemm_state_t *st) {
+	swap_b_pack(&st->kernel_st, st->kernel_pack);
 	set_packed(current_prepack_p(&st->kernel_st));
 }
 
 static void m_step(gemm_state_t *st) {
-	swap_a_pack(&st->kernel_st, st->pack_fun);
+	swap_a_pack(&st->kernel_st, st->kernel_pack);
+
+	st->kernel_st.c_cur = st->C_next;
+	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
+	st->C_next = (FTYPE *)((uintptr_t)st->C_next + st->kernel_st.ldc * m_slice_len);
+}
+
+static void m_step_border(gemm_state_t *st) {
+	swap_a_pack(&st->kernel_st, st->kernel_pack);
 	limit_prepack(current_prepack_p(&st->kernel_st), st->m_it->len);
 
-	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
 	st->kernel_st.c_cur = st->C_next;
-	st->C_next = (FTYPE *)((char *)st->C_next + st->kernel_st.ldc * m_slice_len);
+	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
+	st->C_next = (FTYPE *)((uintptr_t)st->C_next + st->kernel_st.ldc * m_slice_len);
 }
 
 static void last_m_step_before_n(gemm_state_t *st) {
+	swap_a_pack(&st->kernel_st, st->kernel_pack);
 	restart_prepack(current_prepack_p(&st->kernel_st), st->A_pos, st->m_it->len);
+
+	st->kernel_st.c_cur = st->C_next;
 	st->C_next = st->C + st->n_it->pos;
 }
 
 static void last_m_step_before_k(gemm_state_t *st) {
-	int a_max_sched_len;
-	st->max_sched_len_fun(st->k_it->len, &a_max_sched_len, NULL);
-	reset_prepack(current_prepack_p(&st->kernel_st), st->A_next_k, st->m_it->len, st->k_it->len, a_max_sched_len);
+	swap_a_pack(&st->kernel_st, st->kernel_pack);
+	reset_prepack(current_prepack_p(&st->kernel_st), st->A_next_k, st->m_it->len, st->k_it->len);
+
+	st->kernel_st.c_cur = st->C_next;
 	st->C_next = st->C;
 }
 
 static void last_m_step(gemm_state_t *st) {
+	swap_a_pack(&st->kernel_st, st->kernel_pack);
 	st->kernel_st.current_prepack = 0;
+
+	st->kernel_st.c_cur = st->C_next;
 }
 
 static void kernel_loop(gemm_state_t *st) {
@@ -99,7 +117,7 @@ static void kernel_loop(gemm_state_t *st) {
 	for (size_t n_cur = n_pos; n_cur < n_end; n_cur += n_slice_len) {
 		set_kernel_info(&st->kernel_st, st->m_it_bak->len, (int)(n_end - n_cur), st->k_it_bak->len);
 
-		st->kernel_fun(&st->kernel_st);
+		st->kernel_mult(&st->kernel_st);
 
 		st->kernel_st.a_pack_cur = st->kernel_st.a_pack;
 		update_prepack(&st->kernel_st);
@@ -136,10 +154,11 @@ void gemm(const nanoblas_t *nb,
 	kernel_t kernel = nb->kernel;
 	const int m_slice_len = kernel.m_slice_len;
 	const int n_slice_len = kernel.n_slice_len;
+	const int k_unit_len = kernel.k_unit_len;
 
 	/* get block size */
-	const size_t blk_n_max_len = nb->blk_n_max_len;
-	const size_t blk_k_max_len = nb->blk_k_max_len;
+	const size_t blk_n_max_len = ((nb->blk_n_max_len - 1)/n_slice_len + 1) * n_slice_len;
+	const size_t blk_k_max_len = ((nb->blk_k_max_len - 1)/k_unit_len + 1) * k_unit_len;
 
 	/* allocate pack (VLA) */
 	FTYPE mem[2*m_slice_len*blk_k_max_len + 2*blk_n_max_len*blk_k_max_len + 32/sizeof(FTYPE)];
@@ -160,25 +179,20 @@ void gemm(const nanoblas_t *nb,
 	circular_iter_t m_it_bak;
 	circular_iter_t n_it = blk_spec_iter(N, blk_n_max_len, n_slice_len);
 	circular_iter_t n_it_bak;
-	circular_iter_t k_it = blk_spec_iter(K, blk_k_max_len, 1);
+	circular_iter_t k_it = blk_spec_iter(K, blk_k_max_len, k_unit_len);
 	circular_iter_t k_it_bak;
-
-	/* get max scheduling length */
-	int a_max_sched_len, b_max_sched_len;
-	kernel.max_sched_len_fun(k_it.len, &a_max_sched_len, &b_max_sched_len);
 
 	gemm_state_t st = {
 		.A = A,
 		.B = B,
 		.C = C,
 		.C_next = C,
-		.kernel_fun        = kernel.kernel_fun,
-		.pack_fun          = kernel.pack_fun,
-		.max_sched_len_fun = kernel.max_sched_len_fun,
+		.kernel_mult = kernel.mult,
+		.kernel_pack = kernel.pack,
 		.kernel_st = kernel_state_new(
 				A, B, interval_m, interval_n, interval_k_in_a, interval_k_in_b, ldc,
 				a_pack, a_next_pack, b_pack, b_next_pack, m_slice_len, n_slice_len,
-				m_it.len, n_it.len, k_it.len, a_max_sched_len, b_max_sched_len),
+				m_it.len, n_it.len, k_it.len),
 		.m_it     = &m_it,
 		.m_it_bak = &m_it_bak,
 		.n_it     = &n_it,
@@ -193,17 +207,40 @@ void gemm(const nanoblas_t *nb,
 		k_step(&st);
 		do {
 			n_it_bak = n_it;
-			next(&n_it);
-			n_step(&st);
-			if (n_it.pos == 0) last_n_step_before_k(&st);
-			if (n_it.pos == 0 && k_it.pos == 0) last_n_step(&st);
+			switch (next(&n_it)) {
+			case 0:
+				n_step(&st);
+				break;
+			case 1:
+				n_step_border(&st);
+				break;
+			case 2:
+				if (k_it.pos != 0) {
+					last_n_step_before_k(&st);
+				} else {
+					last_n_step(&st);
+				}
+				break;
+			}
 			do {
 				m_it_bak = m_it;
-				next(&m_it);
-				m_step(&st);
-				if (m_it.pos == 0) last_m_step_before_n(&st);
-				if (m_it.pos == 0 && n_it.pos == 0) last_m_step_before_k(&st);
-				if (m_it.pos == 0 && n_it.pos == 0 && k_it.pos == 0) last_m_step(&st);
+				switch(next(&m_it)) {
+				case 0:
+					m_step(&st);
+					break;
+				case 1:
+					m_step_border(&st);
+					break;
+				case 2:
+					if (n_it.pos != 0) {
+						last_m_step_before_n(&st);
+					} else if (k_it.pos != 0) {
+						last_m_step_before_k(&st);
+					} else {
+						last_m_step(&st);
+					}
+					break;
+				}
 				kernel_loop(&st);
 			} while (m_it.pos != 0);
 		} while (n_it.pos != 0);

@@ -34,7 +34,7 @@ static inline circular_iter_t simple_iter(size_t sum, int base_len) {
 circular_iter_t blk_spec_iter(size_t sum, int max_len, int slice_len);
 
 #define next JOIN(NAMESPACE, next)
-static inline void next(circular_iter_t *it) {
+static inline int next(circular_iter_t *it) {
 	it->pos += it->len;
 	if (it->pos == it->dec_pos)
 		it->len -= it->slice_len;
@@ -42,9 +42,12 @@ static inline void next(circular_iter_t *it) {
 	if (distance == 0) {
 		it->pos = 0;
 		it->len = it->base_len;
+		return 2;
 	} else if (distance < (size_t)it->len) {
 		it->len = distance;
+		return 1;
 	}
+	return 0;
 }
 
 #ifdef __cplusplus

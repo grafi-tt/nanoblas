@@ -37,6 +37,5 @@ int main() {
 	std::cout << "avx, no trans, unalign device" << std::endl;
 	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 35, 8, 1, 100);
 
-
 	return s;
 }

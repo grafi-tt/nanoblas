@@ -8,8 +8,10 @@
 #include "lib/util.hpp"
 #include "lib/reference_kernel.hpp"
 
+using namespace nanoblas;
+
 template<typename FTYPE>
-bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
+bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 		int k_len, int m_slice_real_len, int n_slice_real_len, ptrdiff_t ldc) {
 	std::uniform_real_distribution<FTYPE> dist(0, 1);
 
@@ -31,23 +33,19 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-	nanoblas::kernel_state_t<FTYPE> st = {
+	kernel_state_t<FTYPE> st = {
 		a_pack_aligned, b_pack_aligned, c_cur.data(), ldc * static_cast<int>(sizeof(FTYPE)),
 		m_slice_real_len, n_slice_real_len, k_len, 0
 	};
 #pragma GCC diagnostic pop
 
-	RK<FTYPE>::reference_kernel.m_slice_len = kernel.m_slice_len;
-	RK<FTYPE>::reference_kernel.n_slice_len = kernel.n_slice_len;
-	RK<FTYPE>::reference_kernel.max_sched_len_fun = kernel.max_sched_len_fun;
-
-	RK<FTYPE>::reference_kernel.kernel_fun(&st);
+	reference_kernel_mult<FTYPE>(&st, kernel.m_slice_len, kernel.n_slice_len);
 
 	st.a_pack_cur = a_pack_aligned;
 	st.b_pack_cur = b_pack_aligned;
 	st.c_cur = d_cur.data();
 
-	kernel.kernel_fun(&st);
+	kernel.mult(&st);
 
 	bool s = false;
 	if (st.a_pack_cur != a_pack_aligned + kernel.m_slice_len * k_len) {
@@ -78,19 +76,19 @@ bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 }
 
 template<typename FTYPE>
-bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
+bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 		int k_len, int m_slice_real_len, int n_slice_real_len) {
 	return run_mult_test<FTYPE>(gen, kernel, k_len, m_slice_real_len, n_slice_real_len, n_slice_real_len);
 }
 
 template<typename FTYPE>
-bool run_mult_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel, int k_len) {
+bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel, int k_len) {
 	return run_mult_test<FTYPE>(gen, kernel, k_len, kernel.m_slice_len, kernel.n_slice_len);
 }
 
 
 template<typename FTYPE>
-bool run_pack_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
+bool run_pack_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 		int len, int packing_slice_len, int packing_slice_real_len,
 		ptrdiff_t interval_mn, ptrdiff_t interval_k) {
 	std::uniform_real_distribution<FTYPE> dist(0, 1);
@@ -112,7 +110,7 @@ bool run_pack_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-	nanoblas::prepack_state_t<FTYPE> st = {
+	prepack_state_t<FTYPE> st = {
 		mtx.data(),
 		ans_pack_aligned,
 		interval_mn * static_cast<int>(sizeof(FTYPE)),
@@ -123,16 +121,12 @@ bool run_pack_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 	};
 #pragma GCC diagnostic pop
 
-	RK<FTYPE>::reference_kernel.m_slice_len = kernel.m_slice_len;
-	RK<FTYPE>::reference_kernel.n_slice_len = kernel.n_slice_len;
-	RK<FTYPE>::reference_kernel.max_sched_len_fun = kernel.max_sched_len_fun;
-
-	RK<FTYPE>::reference_kernel.pack_fun(&st);
+	reference_kernel_pack<FTYPE>(&st);
 
 	st.next_cur = mtx.data();
 	st.next_pack_cur = tst_pack_aligned;
 
-	kernel.pack_fun(&st);
+	kernel.pack(&st);
 
 	bool s = false;
 	if (st.next_cur != mtx.data() + interval_k * len) {
@@ -155,7 +149,7 @@ bool run_pack_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 }
 
 template<typename FTYPE>
-bool run_pack_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
+bool run_pack_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 		int len, int packing_slice_len,
 		ptrdiff_t interval_mn, ptrdiff_t interval_k) {
 	return run_pack_test<FTYPE>(gen, kernel, len, packing_slice_len, packing_slice_len, interval_mn, interval_k);

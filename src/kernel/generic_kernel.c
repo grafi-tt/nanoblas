@@ -3,9 +3,9 @@
 #include "kernel/generic_kernel.h"
 #include "internal/macro.h"
 
-#define generic_kernel_fun JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_fun_, M_SLICE_LEN, x, N_SLICE_LEN)
+#define generic_kernel_mult JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_mult_, M_SLICE_LEN, x, N_SLICE_LEN)
 __attribute__((optimize("unroll-loops")))
-void generic_kernel_fun(kernel_state_t *kernel_st) {
+void generic_kernel_mult (kernel_state_t *kernel_st) {
 	FTYPE c_buf[M_SLICE_LEN*N_SLICE_LEN];
 	FTYPE *restrict c_buf_cur = c_buf;
 	FTYPE *restrict c_cur = kernel_st->c_cur;
@@ -35,13 +35,16 @@ void generic_kernel_fun(kernel_state_t *kernel_st) {
 	FTYPE *restrict next_pack_cur  = prepack_st->next_pack_cur;
 
 	int slice_pos = 0;
-	int sched_len    = prepack_st->sched_len;
 	const int next_slice_real_len = prepack_st->next_slice_real_len;
 	const int slice_len           = prepack_st->slice_len;
 	const ptrdiff_t interval_mn   = prepack_st->interval_mn;
 	const ptrdiff_t proceed_k     = prepack_st->interval_k - interval_mn * slice_len;
 
-	k_len -= sched_len * slice_len;
+	int pack_len = prepack_st->remained_len;
+	int max_pack_len = prepack_st->slice_len == M_SLICE_LEN ? k_len/M_SLICE_LEN : k_len/N_SLICE_LEN;
+	prepack_st->remained_len -= max_pack_len;
+	if (pack_len > max_pack_len) pack_len = max_pack_len;
+	k_len -= pack_len * slice_len;
 
 	do {
 		for (int i = 0; i < M_SLICE_LEN; i++) {
@@ -60,11 +63,11 @@ void generic_kernel_fun(kernel_state_t *kernel_st) {
 		next_cur = (const FTYPE *)((const char *)next_cur + interval_mn);
 		int moving_up = ++slice_pos == slice_len;
 		moving_up = -moving_up;
-		sched_len += moving_up;
+		pack_len += moving_up;
 		next_cur = (const FTYPE *)((const char*)next_cur + (proceed_k & moving_up));
 		/* ANDN instruction would be used on Haswell/Piledriver or newer*/
 		slice_pos &= ~moving_up;
-	} while (sched_len);
+	} while (pack_len);
 
 	/* save cur */
 	prepack_st->next_cur      = next_cur;
@@ -103,9 +106,9 @@ void generic_kernel_fun(kernel_state_t *kernel_st) {
 	kernel_st->c_cur += N_SLICE_LEN;
 }
 
-#define generic_pack_fun JOIN(NAMESPACE, FSIZE_PREFIX, generic_pack_fun_, M_SLICE_LEN, x, N_SLICE_LEN)
+#define generic_kernel_pack JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_pack_, M_SLICE_LEN, x, N_SLICE_LEN)
 __attribute__((optimize("unroll-loops")))
-void generic_pack_fun(prepack_state_t *prepack_st) {
+void generic_kernel_pack(prepack_state_t *prepack_st) {
 	const FTYPE *restrict next_cur = prepack_st->next_cur;
 	FTYPE *restrict next_pack_cur  = prepack_st->next_pack_cur;
 
@@ -116,7 +119,7 @@ void generic_pack_fun(prepack_state_t *prepack_st) {
 
 	/* pack */
 	if (slice_len == M_SLICE_LEN) {
-		for (int i = 0; i < prepack_st->sched_len; i++) {
+		for (int i = 0; i < prepack_st->remained_len; i++) {
 			for (int j = 0; j < M_SLICE_LEN; j++) {
 				FTYPE v = (j < next_slice_real_len) ? *next_cur : 0;
 				*next_pack_cur++ = v;
@@ -125,7 +128,7 @@ void generic_pack_fun(prepack_state_t *prepack_st) {
 			next_cur = (const FTYPE *)((const char*)next_cur + proceed_k);
 		}
 	} else {
-		for (int i = 0; i < prepack_st->sched_len; i++) {
+		for (int i = 0; i < prepack_st->remained_len; i++) {
 			for (int j = 0; j < N_SLICE_LEN; j++) {
 				FTYPE v = (j < next_slice_real_len) ? *next_cur : 0;
 				*next_pack_cur++ = v;
@@ -138,19 +141,5 @@ void generic_pack_fun(prepack_state_t *prepack_st) {
 	/* save cur */
 	prepack_st->next_cur      = next_cur;
 	prepack_st->next_pack_cur = next_pack_cur;
+	prepack_st->remained_len  = 0;
 }
-
-#define generic_max_sched_len_fun JOIN(NAMESPACE, FSIZE_PREFIX, generic_max_sched_len_fun_, M_SLICE_LEN, x, N_SLICE_LEN)
-void generic_max_sched_len_fun(int k_len, int *a_max_sched_len, int *b_max_sched_len) {
-	if (a_max_sched_len) *a_max_sched_len = k_len / M_SLICE_LEN;
-	if (b_max_sched_len) *b_max_sched_len = k_len / N_SLICE_LEN;
-}
-
-#define generic_kernel JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_, M_SLICE_LEN, x, N_SLICE_LEN)
-kernel_t generic_kernel = {
-	.kernel_fun        = &generic_kernel_fun,
-	.pack_fun          = &generic_pack_fun,
-	.max_sched_len_fun = &generic_max_sched_len_fun,
-	.m_slice_len       = M_SLICE_LEN,
-	.n_slice_len       = N_SLICE_LEN,
-};
