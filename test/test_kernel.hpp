@@ -97,8 +97,8 @@ bool run_pack_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 
 
 	std::vector<FTYPE> mtx(std::max(packing_slice_len * interval_mn, len * interval_k));
-	std::vector<FTYPE> ans_pack(packing_slice_len * len + 32/sizeof(FTYPE));
-	std::vector<FTYPE> tst_pack(packing_slice_len * len + 32/sizeof(FTYPE));
+	std::vector<FTYPE> ans_pack(packing_slice_len * (len + 8) + 32/sizeof(FTYPE));
+	std::vector<FTYPE> tst_pack(packing_slice_len * (len + 8) + 32/sizeof(FTYPE));
 
 	for (auto &&v: mtx) v = dist(gen);
 	std::mt19937 gen2 = gen;
@@ -137,10 +137,6 @@ bool run_pack_test(std::mt19937 gen, const nanoblas::kernel_t<FTYPE> &kernel,
 	bool s = false;
 	if (st.next_cur != mtx.data() + interval_k * len) {
 		std::cerr << "next_cur is incremented by "<<st.next_cur - mtx.data()<<", not "<<interval_k * len << std::endl;
-		s = true;
-	}
-	if (st.next_pack_cur != tst_pack_aligned + packing_slice_len * len) {
-		std::cerr << "next_pack_cur is incremented by "<<st.next_pack_cur - tst_pack_aligned<<", not "<<packing_slice_len * len << std::endl;
 		s = true;
 	}
 	for (int i = 0; i < len; i++) {

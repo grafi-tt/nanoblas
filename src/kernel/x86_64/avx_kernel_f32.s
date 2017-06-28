@@ -81,198 +81,6 @@ loadmask:
 .float 0
 .endr
 
-.globl nanoblas_f32_avx_pack_asm
-nanoblas_f32_avx_pack_asm:
-	movq offset_next_cur(%rcx), %r8
-	movq offset_interval_mn(%rcx), %r9
-	movq offset_next_pack_cur(%rcx), %r10
-	cmpq $4, %r9
-	jne pack_trans
-
-	// ymm0 will be the template of load mask
-	// ymm1 is [1.0, ..., 1.0]
-	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
-	movl offset_sched_len(%rcx), %eax
-	shll $4, %eax
-	subl offset_next_slice_real_len(%rcx), %eax
-	leaq loadmask(%rip), %rdx
-	vmovups (%rdx, %rax, 4), %ymm0
-	vmovaps (%rdx), %ymm1
-
-	// pack data
-	// ymm8 is the temporary
-
-	vmaskmovps (%r8), %ymm0, %ymm8
-	vmovaps %ymm8, (%r10)
-	// +1
-	vaddps %ymm1, %ymm0, %ymm5
-	vaddps %ymm1, %ymm1, %ymm3
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm5, %ymm8
-	vmovaps %ymm8, 32(%r10)
-	// +2
-	vaddps %ymm3, %ymm0, %ymm6
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm6, %ymm8
-	vmovaps %ymm8, 64(%r10)
-	// +3
-	vaddps %ymm3, %ymm5, %ymm7
-	vaddps %ymm3, %ymm3, %ymm3
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm7, %ymm8
-	vmovaps %ymm8, 96(%r10)
-	// incr r10
-	addq $256, %r10
-	// +4
-	vaddps %ymm3, %ymm0, %ymm4
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm4, %ymm8
-	vmovaps %ymm8, -128(%r10)
-	// +5
-	vaddps %ymm3, %ymm5, %ymm5
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm5, %ymm8
-	vmovaps %ymm8, -96(%r10)
-	// +6
-	vaddps %ymm3, %ymm6, %ymm6
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm6, %ymm8
-	vmovaps %ymm8, -64(%r10)
-	// +7
-	vaddps %ymm1, %ymm7, %ymm7
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm7, %ymm8
-	vmovaps %ymm8, -32(%r10)
-
-	movq %r8, offset_next_cur(%rcx)
-	movq %r10, offset_next_pack_cur(%rcx)
-
-	ret
-
-.balign 16
-pack_trans:
-	movq offset_interval_k(%rcx), %r9
-
-	// ymm0 will be the template of load mask
-	// ymm1 is [1.0, ..., 1.0]
-	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
-	movl offset_next_slice_real_len(%rcx), %eax
-	shll $6, %eax
-	movl offset_sched_len(%rcx), %edx
-	shll $2, %edx
-	// update next_cur first
-	leaq (%r8, %rdx), %r11
-	movq %r11, offset_next_cur(%rcx)
-	// get mask
-	subl %edx, %eax
-	leaq loadmask(%rip), %rdx
-	vmovups (%rdx, %rax, 4), %ymm0
-	vmovaps (%rdx), %ymm1
-
-	// incr next_pack_cur
-	leaq 256(%r10), %r11
-
-	// load
-	vmaskmovps (%r8), %ymm0, %ymm8
-	// +1
-	vaddps %ymm1, %ymm0, %ymm5
-	vaddps %ymm1, %ymm1, %ymm3
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm5, %ymm9
-	// +2
-	vaddps %ymm3, %ymm0, %ymm6
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm6, %ymm10
-	// +3
-	vaddps %ymm3, %ymm5, %ymm7
-	vaddps %ymm3, %ymm3, %ymm3
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm7, %ymm11
-	// +4
-	vaddps %ymm3, %ymm0, %ymm4
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm4, %ymm12
-	// +5
-	vaddps %ymm3, %ymm5, %ymm5
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm5, %ymm13
-	// +6
-	vaddps %ymm3, %ymm6, %ymm6
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm6, %ymm14
-	// +7
-	vaddps %ymm1, %ymm7, %ymm7
-	addq %r9, %r8
-	vmaskmovps (%r8), %ymm7, %ymm15
-
-	// save cur
-	movq %r11, offset_next_pack_cur(%rcx)
-
-	// transpose algorithm is from
-	// IA-32/64 Optimization Manual 11.11.1
-
-	// unpack lo
-	vunpcklps %ymm9, %ymm8, %ymm0
-	vunpcklps %ymm11, %ymm10, %ymm1
-	vunpcklps %ymm13, %ymm12, %ymm2
-	vunpcklps %ymm15, %ymm14, %ymm3
-	// unpack hi
-	vunpckhps %ymm9, %ymm8, %ymm4
-	vunpckhps %ymm11, %ymm10, %ymm5
-	vunpckhps %ymm13, %ymm12, %ymm6
-	vunpckhps %ymm15, %ymm14, %ymm7
-
-	// shuf lo
-	vshufps $0x4E, %ymm1, %ymm0, %ymm8
-	vshufps $0x4E, %ymm3, %ymm2, %ymm9
-	// first half hi4 lo0
-	vblendps $0xCC, %ymm8, %ymm0, %ymm10
-	// second half hi4 lo0
-	vblendps $0xCC, %ymm9, %ymm2, %ymm11
-	// 0
-	vperm2f128 $0x20, %ymm11, %ymm10, %ymm12
-	vmovaps %ymm12, (%r10)
-	// 4
-	vperm2f128 $0x31, %ymm11, %ymm10, %ymm13
-	vmovaps %ymm13, -128(%r11)
-	// first half hi5 lo1
-	vblendps $0x33, %ymm8, %ymm1, %ymm10
-	// second half hi5 lo1
-	vblendps $0x33, %ymm9, %ymm3, %ymm11
-	// 1
-	vperm2f128 $0x20, %ymm11, %ymm10, %ymm14
-	vmovaps %ymm14, 32(%r10)
-	// 5
-	vperm2f128 $0x31, %ymm11, %ymm10, %ymm15
-	vmovaps %ymm15, -96(%r11)
-
-	// shuf hi
-	vshufps $0x4E, %ymm5, %ymm4, %ymm8
-	vshufps $0x4E, %ymm7, %ymm6, %ymm9
-	// first half hi6 lo2
-	vblendps $0xCC, %ymm8, %ymm4, %ymm10
-	// second half hi6 lo2
-	vblendps $0xCC, %ymm9, %ymm6, %ymm11
-	// 2
-	vperm2f128 $0x20, %ymm11, %ymm10, %ymm12
-	vmovaps %ymm12, 64(%r10)
-	// 6
-	vperm2f128 $0x31, %ymm11, %ymm10, %ymm13
-	vmovaps %ymm13, -64(%r11)
-	// first half hi7 lo3
-	vblendps $0x33, %ymm8, %ymm5, %ymm10
-	// second half hi7 lo3
-	vblendps $0x33, %ymm9, %ymm7, %ymm11
-	// 3
-	vperm2f128 $0x20, %ymm11, %ymm10, %ymm14
-	vmovaps %ymm14, 96(%r10)
-	// 7
-	vperm2f128 $0x31, %ymm11, %ymm10, %ymm15
-	vmovaps %ymm15, -32(%r11)
-
-	ret
-
-.balign 16
 .globl nanoblas_f32_avx_kernel_asm
 nanoblas_f32_avx_kernel_asm:
 	// create mask to load C
@@ -474,5 +282,216 @@ store_c:
 	addq %rcx, %rdx
 	testl %ecx, %ecx
 	jnz nanoblas_f32_avx_pack_asm
+
+	ret
+
+.balign 16
+.globl nanoblas_f32_avx_pack_asm
+nanoblas_f32_avx_pack_asm:
+	movq offset_next_cur(%rcx), %r8
+	movq offset_interval_k(%rcx), %r9
+	movq offset_next_pack_cur(%rcx), %r10
+	cmpq $4, %r9
+	je pack_trans
+
+	// ymm0 will be the template of load mask
+	// ymm1 is [1.0, ..., 1.0]
+	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
+	xorl %eax, %eax
+	subl offset_next_slice_real_len(%rcx), %eax
+	cdqe
+	leaq loadmask(%rip), %rdx
+	vmovups 128(%rdx, %rax, 4), %ymm0
+	vmovaps (%rdx), %ymm1
+
+	// aga
+	xorl %eax, %eax
+	subl offset_sched_len(%rcx), %eax
+	cdqe
+
+	// pack data
+	// ymm8 is the temporary
+	mov %r9, %r11
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, (%r10)
+	// +1
+	addq $1, %rax
+	cqo
+	andq %rdx, %r9
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, 32(%r10)
+	// +2
+	addq $1, %rax
+	cqo
+	andq %rdx, %r9
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, 64(%r10)
+	// +3
+	addq $1, %rax
+	cqo
+	andq %rdx, %r9
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, 96(%r10)
+	// incr r10
+	addq $256, %r10
+	// +4
+	addq $1, %rax
+	cqo
+	andq %rdx, %r9
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, -128(%r10)
+	// +5
+	addq $1, %rax
+	cqo
+	andq %rdx, %r9
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, -96(%r10)
+	// +6
+	addq $1, %rax
+	cqo
+	andq %rdx, %r9
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, -64(%r10)
+	// +7
+	addq $1, %rax
+	cqo
+	andq %rdx, %r9
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm0, %ymm8
+	vmovaps %ymm8, -32(%r10)
+
+	addq %r11, %r8
+	movq %r8, offset_next_cur(%rcx)
+	movq %r10, offset_next_pack_cur(%rcx)
+
+	ret
+
+.balign 16
+pack_trans:
+	movq offset_interval_mn(%rcx), %r9
+
+	// ymm0 will be the template of load mask
+	// ymm1 is [1.0, ..., 1.0]
+	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
+	movl offset_next_slice_real_len(%rcx), %eax
+	shll $6, %eax
+	movl offset_sched_len(%rcx), %edx
+	addl %edx, %edx
+	addl %edx, %edx
+	// update next_cur first
+	leaq (%r8, %rdx), %r11
+	movq %r11, offset_next_cur(%rcx)
+	// get mask
+	subl %edx, %eax
+	leaq loadmask(%rip), %rdx
+	vmovups (%rdx, %rax), %ymm0
+	vmovaps (%rdx), %ymm1
+
+	// incr next_pack_cur
+	leaq 256(%r10), %r11
+
+	// load
+	vmaskmovps (%r8), %ymm0, %ymm8
+	// +1
+	vaddps %ymm1, %ymm0, %ymm5
+	vaddps %ymm1, %ymm1, %ymm3
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm5, %ymm9
+	// +2
+	vaddps %ymm3, %ymm0, %ymm6
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm6, %ymm10
+	// +3
+	vaddps %ymm3, %ymm5, %ymm7
+	vaddps %ymm3, %ymm3, %ymm3
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm7, %ymm11
+	// +4
+	vaddps %ymm3, %ymm0, %ymm4
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm4, %ymm12
+	// +5
+	vaddps %ymm3, %ymm5, %ymm5
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm5, %ymm13
+	// +6
+	vaddps %ymm3, %ymm6, %ymm6
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm6, %ymm14
+	// +7
+	vaddps %ymm1, %ymm7, %ymm7
+	addq %r9, %r8
+	vmaskmovps (%r8), %ymm7, %ymm15
+
+	// save cur
+	movq %r11, offset_next_pack_cur(%rcx)
+
+	// transpose algorithm is from
+	// IA-32/64 Optimization Manual 11.11.1
+
+	// unpack lo
+	vunpcklps %ymm9, %ymm8, %ymm0
+	vunpcklps %ymm11, %ymm10, %ymm1
+	vunpcklps %ymm13, %ymm12, %ymm2
+	vunpcklps %ymm15, %ymm14, %ymm3
+	// unpack hi
+	vunpckhps %ymm9, %ymm8, %ymm4
+	vunpckhps %ymm11, %ymm10, %ymm5
+	vunpckhps %ymm13, %ymm12, %ymm6
+	vunpckhps %ymm15, %ymm14, %ymm7
+
+	// shuf lo
+	vshufps $0x4E, %ymm1, %ymm0, %ymm8
+	vshufps $0x4E, %ymm3, %ymm2, %ymm9
+	// first half hi4 lo0
+	vblendps $0xCC, %ymm8, %ymm0, %ymm10
+	// second half hi4 lo0
+	vblendps $0xCC, %ymm9, %ymm2, %ymm11
+	// 0
+	vperm2f128 $0x20, %ymm11, %ymm10, %ymm12
+	vmovaps %ymm12, (%r10)
+	// 4
+	vperm2f128 $0x31, %ymm11, %ymm10, %ymm13
+	vmovaps %ymm13, -128(%r11)
+	// first half hi5 lo1
+	vblendps $0x33, %ymm8, %ymm1, %ymm10
+	// second half hi5 lo1
+	vblendps $0x33, %ymm9, %ymm3, %ymm11
+	// 1
+	vperm2f128 $0x20, %ymm11, %ymm10, %ymm14
+	vmovaps %ymm14, 32(%r10)
+	// 5
+	vperm2f128 $0x31, %ymm11, %ymm10, %ymm15
+	vmovaps %ymm15, -96(%r11)
+
+	// shuf hi
+	vshufps $0x4E, %ymm5, %ymm4, %ymm8
+	vshufps $0x4E, %ymm7, %ymm6, %ymm9
+	// first half hi6 lo2
+	vblendps $0xCC, %ymm8, %ymm4, %ymm10
+	// second half hi6 lo2
+	vblendps $0xCC, %ymm9, %ymm6, %ymm11
+	// 2
+	vperm2f128 $0x20, %ymm11, %ymm10, %ymm12
+	vmovaps %ymm12, 64(%r10)
+	// 6
+	vperm2f128 $0x31, %ymm11, %ymm10, %ymm13
+	vmovaps %ymm13, -64(%r11)
+	// first half hi7 lo3
+	vblendps $0x33, %ymm8, %ymm5, %ymm10
+	// second half hi7 lo3
+	vblendps $0x33, %ymm9, %ymm7, %ymm11
+	// 3
+	vperm2f128 $0x20, %ymm11, %ymm10, %ymm14
+	vmovaps %ymm14, 96(%r10)
+	// 7
+	vperm2f128 $0x31, %ymm11, %ymm10, %ymm15
+	vmovaps %ymm15, -32(%r11)
 
 	ret

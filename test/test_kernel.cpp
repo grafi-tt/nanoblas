@@ -31,9 +31,11 @@ int main() {
 	std::cout << "generic 6x4 trans" << std::endl;
 	s = run_pack_test<float>(gen, nanoblas_f32_generic_kernel_6x4, 64, 6, 10, 1);
 	std::cout << "avx, no trans" << std::endl;
-	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 8, 8, 1, 100);
+	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 8, 8, 1, 100);
 	std::cout << "avx, trans" << std::endl;
-	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 8, 8, 100, 1);
+	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 8, 8, 100, 1);
+	std::cout << "avx, no trans, unalign device" << std::endl;
+	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 35, 8, 1, 100);
 
 
 	return s;

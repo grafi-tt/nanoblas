@@ -1,3 +1,4 @@
+#include "nanoblas_prepack.h"
 #include "kernel/x86_64/avx_kernel.h"
 #include "internal/macro.h"
 
@@ -9,6 +10,13 @@ void nanoblas_f32_avx_kernel_fun(kernel_state_t *kernel_st) {
 
 void nanoblas_f32_avx_pack_asm(prepack_state_t *, void *, void *, prepack_state_t *);
 void nanoblas_f32_avx_pack_fun(prepack_state_t *prepack_st) {
+	int sched_len = prepack_st->sched_len;
+	prepack_st->sched_len = 8;
+	while (sched_len > 8) {
+		nanoblas_f32_avx_pack_asm(prepack_st, NULL, NULL, prepack_st);
+		sched_len -= 8;
+	}
+	prepack_st->sched_len = sched_len;
 	nanoblas_f32_avx_pack_asm(prepack_st, NULL, NULL, prepack_st);
 }
 
