@@ -280,6 +280,12 @@ _nanoblas_f32_avx_kernel_pack_asm:
 	cmpq $4, %r9
 	je pack_trans
 
+	// update next_cur first
+	movl %eax, %edx
+	shll $5, %edx
+	addq %r10, %rdx
+	movq %rdx, offset_next_pack_cur(%rcx)
+
 	// ymm0 will the load mask
 	// see comment in nanoblas_f32_avx_kernel_asm for detail, at the place creating mask to load C
 	movl offset_next_slice_real_len(%rcx), %r11d
@@ -344,7 +350,6 @@ _nanoblas_f32_avx_kernel_pack_asm:
 	addq %r11, %r8
 	// save cur
 	movq %r8, offset_next_cur(%rcx)
-	movq %r10, offset_next_pack_cur(%rcx)
 
 	ret
 
