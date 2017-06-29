@@ -20,8 +20,14 @@ int main() {
 	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 8, 8, 1, 100);
 	std::cout << "avx, trans" << std::endl;
 	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 8, 8, 100, 1);
-	std::cout << "avx, no trans, unalign device" << std::endl;
+	std::cout << "avx, no trans, unalign" << std::endl;
 	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 35, 8, 1, 100);
+	std::cout << "avx, no trans, unalign, border" << std::endl;
+	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 33, 8, 1, 1, 100);
+	std::cout << "avx, trans, unalign" << std::endl;
+	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 35, 8, 100, 1);
+	std::cout << "avx, trans, unalign, border" << std::endl;
+	s = run_pack_test<float>(gen, nanoblas_f32_avx_kernel, 33, 8, 1, 100, 1);
 
 	return s;
 }

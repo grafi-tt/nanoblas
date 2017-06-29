@@ -368,9 +368,6 @@ pack_trans:
 	leaq loadmask(%rip), %rdx
 	vmovups (%rdx, %rax), %ymm0
 
-	// incr next_pack_cur
-	leaq 256(%r10), %r11
-
 	// load limit
 	movl offset_next_slice_real_len(%rcx), %eax
 
@@ -378,46 +375,48 @@ pack_trans:
 	vmaskmovps (%r8), %ymm0, %ymm8
 	// -1
 	addq %r9, %r8
-	movq %r8, %rdx
+	movq %r8, %r11
 	subl $1, %eax
-	cmovle %rsp, %rdx
-	vmaskmovps (%rdx), %ymm0, %ymm9
+	cmovle %rdx, %r11
+	vmaskmovps (%r11), %ymm0, %ymm9
 	// -2
 	addq %r9, %r8
-	movq %r8, %rdx
+	movq %r8, %r11
 	subl $1, %eax
-	cmovle %rsp, %rdx
-	vmaskmovps (%rdx), %ymm0, %ymm10
+	cmovle %rdx, %r11
+	vmaskmovps (%r11), %ymm0, %ymm10
 	// -3
 	addq %r9, %r8
-	movq %r8, %rdx
+	movq %r8, %r11
 	subl $1, %eax
-	cmovle %rsp, %rdx
-	vmaskmovps (%rdx), %ymm0, %ymm11
+	cmovle %rdx, %r11
+	vmaskmovps (%r11), %ymm0, %ymm11
 	// -4
 	addq %r9, %r8
-	movq %r8, %rdx
+	movq %r8, %r11
 	subl $1, %eax
-	cmovle %rsp, %rdx
-	vmaskmovps (%rdx), %ymm0, %ymm12
+	cmovle %rdx, %r11
+	vmaskmovps (%r11), %ymm0, %ymm12
 	// -5
 	addq %r9, %r8
-	movq %r8, %rdx
+	movq %r8, %r11
 	subl $1, %eax
-	cmovle %rsp, %rdx
-	vmaskmovps (%rdx), %ymm0, %ymm13
+	cmovle %rdx, %r11
+	vmaskmovps (%r11), %ymm0, %ymm13
 	// -6
 	addq %r9, %r8
-	movq %r8, %rdx
+	movq %r8, %r11
 	subl $1, %eax
-	cmovle %rsp, %rdx
-	vmaskmovps (%rdx), %ymm0, %ymm14
+	cmovle %rdx, %r11
+	vmaskmovps (%r11), %ymm0, %ymm14
 	// -7
 	addq %r9, %r8
 	subl $1, %eax
-	cmovle %rsp, %r8
+	cmovle %rdx, %r8
 	vmaskmovps (%r8), %ymm0, %ymm15
 
+	// incr next_pack_cur
+	leaq 256(%r10), %r11
 	// save cur
 	movq %r11, offset_next_pack_cur(%rcx)
 

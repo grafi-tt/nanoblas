@@ -18,15 +18,20 @@ bool run_test_set(std::mt19937 gen, nanoblas_t nb) {
 	auto gemm_impl = get_gemm_impl<FTYPE>(nb);
 
 	bool s = false;
-	/*
 	s = run_test(gen, gemm_impl, 200, 200, 200) || s;
 	s = run_test(gen, gemm_impl, 4, 128, 64) || s;
 	s = run_test(gen, gemm_impl, 512, 512, 512) || s;
 	s = run_test(gen, gemm_impl, 200, 200, 200, 300, 300, 300) || s;
 	s = run_test(gen, gemm_impl, 123, 456, 789) || s;
-	*/
-	s = run_test(gen, gemm_impl, 1024, 1024, 1024) || s;
 
+	return s;
+}
+
+template<typename FTYPE>
+bool run_bench_set(std::mt19937 gen, nanoblas_t nb) {
+	bool s = false;
+	auto gemm_impl = get_gemm_impl<FTYPE>(nb);
+	s = run_test(gen, gemm_impl, 1024, 1024, 1024) || s;
 	return s;
 }
 
@@ -44,7 +49,6 @@ int main() {
 	nb.f32_kernel = get_reference_kernel<float, 4, 4>();
 	nb.f64_kernel = get_reference_kernel<double, 4, 4>();
 
-	/*
 	std::cout << "reference 4x4 float" << std::endl;
 	s = run_test_set<float>(gen, nb) || s;
 	std::cout << "reference 4x4 double" << std::endl;
@@ -65,14 +69,18 @@ int main() {
 	s = run_test_set<float>(gen, nb) || s;
 	std::cout << "generic 6x4 double" << std::endl;
 	s = run_test_set<double>(gen, nb) || s;
-	*/
+
+	std::cout << "avx float" << std::endl;
+	nb.f32_kernel = get_avx_kernel();
+	s = run_test_set<float>(gen, nb) || s;
 
 	nb.f32_blk_k_max_len = 256;
 	nb.f32_blk_n_max_len = 256;
 	nb.f32_kernel = get_avx_kernel();
 
+	std::cout << "benchmark" << std::endl;
 	std::cout << "avx float" << std::endl;
-	s = run_test_set<float>(gen, nb) || s;
+	s = run_bench_set<float>(gen, nb) || s;
 
 	return s;
 }

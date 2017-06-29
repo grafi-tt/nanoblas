@@ -18,6 +18,8 @@ int main() {
 	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 67);
 	std::cout << "avx with 5x5 real len" << std::endl;
 	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 64, 5, 5);
+	std::cout << "avx with 1x1 real len" << std::endl;
+	s = run_mult_test<float>(gen, nanoblas_f32_avx_kernel, 30, 1, 1);
 
 	return s;
 }
