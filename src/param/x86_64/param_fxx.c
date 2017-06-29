@@ -36,9 +36,9 @@ void nanoblas_init(nanoblas_t *nb) {
 	eax = 1;
 	cpuid(&eax, &ebx, &ecx, &edx);
 	/* check sse2 */
-	if (!(edx && (1<<26))) return;
+	if (!(edx & (1<<26))) return;
 	/* check avx */
-	if (!(ecx && (1<<28))) return;
+	if (!(ecx & (1<<28))) return;
 	nb->f32_kernel = nanoblas_f32_avx_kernel;
 	/* check fma */
 	/* if (!(ecx && (1<<12))) return; */

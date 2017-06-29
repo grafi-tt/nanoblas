@@ -8,7 +8,7 @@ function(my_add_test test_name)
 	set_target_properties(${test_name} PROPERTIES CXX_STANDARD 11)
 	set_target_properties(${test_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
 	if(${CMAKE_C_COMPILER_ID} MATCHES "GNU|Clang")
-		target_compile_options(${test_name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3 -Werror -Wall -Wextra -Wpedantic>)
+		target_compile_options(${test_name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3 -Werror -Wall -Wextra -Wpedantic -std=c++11>)
 	endif()
 endfunction()
 

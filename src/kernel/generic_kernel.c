@@ -4,7 +4,6 @@
 #include "internal/macro.h"
 
 #define generic_kernel_mult JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_mult_, M_SLICE_LEN, x, N_SLICE_LEN)
-__attribute__((optimize("unroll-loops")))
 void generic_kernel_mult (kernel_state_t *kernel_st) {
 	FTYPE c_buf[M_SLICE_LEN*N_SLICE_LEN];
 	FTYPE *restrict c_buf_cur = c_buf;
@@ -107,7 +106,6 @@ void generic_kernel_mult (kernel_state_t *kernel_st) {
 }
 
 #define generic_kernel_pack JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_pack_, M_SLICE_LEN, x, N_SLICE_LEN)
-__attribute__((optimize("unroll-loops")))
 void generic_kernel_pack(prepack_state_t *prepack_st) {
 	const FTYPE *restrict next_cur = prepack_st->next_cur;
 	FTYPE *restrict next_pack_cur  = prepack_st->next_pack_cur;
