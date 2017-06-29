@@ -1,6 +1,7 @@
 #include "nanoblas.hpp"
 #include "test_gemm.hpp"
 #include "kernel/generic_kernel.h"
+#include "kernel/x86_64/avx_kernel.hpp"
 #include "lib/reference_kernel.hpp"
 
 using namespace nanoblas;
@@ -12,21 +13,19 @@ impl_t<FTYPE> get_gemm_impl(const nanoblas_t &nb) {
 	};
 }
 
+template<typename FTYPE>
 bool run_test_set(std::mt19937 gen, nanoblas_t nb) {
-	auto sgemm_impl = get_gemm_impl<float>(nb);
-	auto dgemm_impl = get_gemm_impl<double>(nb);
+	auto gemm_impl = get_gemm_impl<FTYPE>(nb);
 
 	bool s = false;
-	s = run_test(gen, sgemm_impl, 200, 200, 200) || s;
-	s = run_test(gen, dgemm_impl, 200, 200, 200) || s;
-	s = run_test(gen, sgemm_impl, 4, 128, 64) || s;
-	s = run_test(gen, dgemm_impl, 4, 128, 64) || s;
-	s = run_test(gen, sgemm_impl, 512, 512, 512) || s;
-	s = run_test(gen, dgemm_impl, 512, 512, 512) || s;
-	s = run_test(gen, sgemm_impl, 200, 200, 200, 300, 300, 300) || s;
-	s = run_test(gen, dgemm_impl, 200, 200, 200, 300, 300, 300) || s;
-	s = run_test(gen, sgemm_impl, 123, 456, 789) || s;
-	s = run_test(gen, dgemm_impl, 123, 456, 789) || s;
+	/*
+	s = run_test(gen, gemm_impl, 200, 200, 200) || s;
+	s = run_test(gen, gemm_impl, 4, 128, 64) || s;
+	s = run_test(gen, gemm_impl, 512, 512, 512) || s;
+	s = run_test(gen, gemm_impl, 200, 200, 200, 300, 300, 300) || s;
+	s = run_test(gen, gemm_impl, 123, 456, 789) || s;
+	*/
+	s = run_test(gen, gemm_impl, 1024, 1024, 1024) || s;
 
 	return s;
 }
@@ -40,24 +39,40 @@ int main() {
 	nb.f64_blk_n_max_len = 128;
 	nb.f64_blk_k_max_len = 128;
 
-	std::cout << "reference 4x4" << std::endl;
+	bool s = false;
+
 	nb.f32_kernel = get_reference_kernel<float, 4, 4>();
 	nb.f64_kernel = get_reference_kernel<double, 4, 4>();
 
-	bool s = false;
-	s = run_test_set(gen, nb) || s;
+	/*
+	std::cout << "reference 4x4 float" << std::endl;
+	s = run_test_set<float>(gen, nb) || s;
+	std::cout << "reference 4x4 double" << std::endl;
+	s = run_test_set<double>(gen, nb) || s;
 
-	std::cout << "generic 4x4" << std::endl;
 	nb.f32_kernel = nanoblas_f32_generic_kernel_4x4;
 	nb.f64_kernel = nanoblas_f64_generic_kernel_4x4;
 
-	s = run_test_set(gen, nb) || s;
+	std::cout << "generic 4x4 float" << std::endl;
+	s = run_test_set<float>(gen, nb) || s;
+	std::cout << "generic 4x4 double" << std::endl;
+	s = run_test_set<double>(gen, nb) || s;
 
-	std::cout << "generic 6x4" << std::endl;
 	nb.f32_kernel = nanoblas_f32_generic_kernel_6x4;
 	nb.f64_kernel = nanoblas_f64_generic_kernel_6x4;
 
-	s = run_test_set(gen, nb) || s;
+	std::cout << "generic 6x4 float" << std::endl;
+	s = run_test_set<float>(gen, nb) || s;
+	std::cout << "generic 6x4 double" << std::endl;
+	s = run_test_set<double>(gen, nb) || s;
+	*/
+
+	nb.f32_blk_k_max_len = 256;
+	nb.f32_blk_n_max_len = 256;
+	nb.f32_kernel = get_avx_kernel();
+
+	std::cout << "avx float" << std::endl;
+	s = run_test_set<float>(gen, nb) || s;
 
 	return s;
 }
