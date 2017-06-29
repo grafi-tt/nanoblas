@@ -30,7 +30,9 @@ loadmask:
 .endr
 
 .globl _nanoblas_f32_avx_kernel_mult_asm
+.globl nanoblas_f32_avx_kernel_mult_asm
 _nanoblas_f32_avx_kernel_mult_asm:
+nanoblas_f32_avx_kernel_mult_asm:
 	// create mask to load C
 	// ymm0 will be [0, ..., 0, -1, ..., -1]
 	//   #(8 - n_slice_real_len) #n_slice_rean_len
@@ -257,13 +259,15 @@ store_c:
 	movl offset_current_prepack(%rcx), %edx
 	addq %rdx, %rcx
 	testl %edx, %edx
-	jnz _nanoblas_f32_avx_kernel_pack_asm
+	jnz nanoblas_f32_avx_kernel_pack_asm
 
 	ret
 
 .balign 16
 .globl _nanoblas_f32_avx_kernel_pack_asm
+.globl nanoblas_f32_avx_kernel_pack_asm
 _nanoblas_f32_avx_kernel_pack_asm:
+nanoblas_f32_avx_kernel_pack_asm:
 	movq offset_next_cur(%rcx), %r8
 	movq offset_interval_k(%rcx), %r9
 	movq offset_next_pack_cur(%rcx), %r10

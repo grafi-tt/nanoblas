@@ -2,7 +2,6 @@
 #define NANOBLAS_TEST_TEST_GEMM_HPP
 
 #include <cstdint>
-#include <chrono>
 #include <functional>
 #include <iostream>
 #include <random>
@@ -29,22 +28,12 @@ bool run_test(std::mt19937 gen, const impl_t<FTYPE> &impl, size_t M, size_t N, s
 	for (auto &&v: C) v = dist(gen);
 	for (auto &&v: D) v = dist(gen2);
 
-	auto t1s = std::chrono::high_resolution_clock::now();
 	for (size_t m = 0; m < M; m++)
 		for (size_t n = 0; n < N; n++)
 			for (size_t k = 0; k < K; k++)
 				C[ldc*(m+1)+n] += A[lda*(m+1)+k] * B[ldb*(k+1)+n];
-	auto t1e = std::chrono::high_resolution_clock::now();
-	auto d1 = t1e - t1s;
-	std::cout << "naive " <<
-		std::chrono::duration_cast<std::chrono::milliseconds>(d1).count() << std::endl;
 
-	auto t2s = std::chrono::high_resolution_clock::now();
 	impl(A.data()+lda, B.data()+ldb, D.data()+ldc, M, N, K, lda, ldb, ldc);
-	auto t2e = std::chrono::high_resolution_clock::now();
-	auto d2 = t2e - t2s;
-	std::cout << "impl " <<
-		std::chrono::duration_cast<std::chrono::milliseconds>(d2).count() << std::endl;
 
 	for (size_t i = 0; i < M+2; i++) {
 		for (size_t j = 0; j < N; j++) {
