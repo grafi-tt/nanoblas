@@ -43,10 +43,6 @@ static void k_step(gemm_state_t *st) {
 
 static void n_step(gemm_state_t *st) {
 	swap_b_pack(&st->kernel_st, st->kernel_pack);
-}
-
-static void n_step_border(gemm_state_t *st) {
-	swap_b_pack(&st->kernel_st, st->kernel_pack);
 	limit_prepack(current_prepack_p(&st->kernel_st), st->n_it->len);
 }
 
@@ -62,15 +58,7 @@ static void last_n_step(gemm_state_t *st) {
 
 static void m_step(gemm_state_t *st) {
 	swap_a_pack(&st->kernel_st, st->kernel_pack);
-
-	st->kernel_st.c_cur = st->C_next;
-	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
-	st->C_next = (FTYPE *)((uintptr_t)st->C_next + st->kernel_st.ldc * m_slice_len);
-}
-
-static void m_step_border(gemm_state_t *st) {
-	swap_a_pack(&st->kernel_st, st->kernel_pack);
-	limit_prepack(current_prepack_p(&st->kernel_st), st->m_it->len);
+	proceed_prepack(current_prepack_p(&st->kernel_st), st->m_it->len);
 
 	st->kernel_st.c_cur = st->C_next;
 	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
@@ -106,7 +94,7 @@ static void kernel_loop(gemm_state_t *st) {
 	const FTYPE *c_next_cur = st->C_next;
 	for (int i = 0; i < m_slice_len; i++) {
 		__builtin_prefetch(c_next_cur, 1, 0);
-		c_next_cur = (FTYPE *)((char *)c_next_cur + st->kernel_st.ldc);
+		c_next_cur = (FTYPE *)((uintptr_t)c_next_cur + st->kernel_st.ldc);
 	}
 #endif
 
@@ -207,40 +195,22 @@ void gemm(const nanoblas_t *nb,
 		k_step(&st);
 		do {
 			n_it_bak = n_it;
-			switch (next(&n_it)) {
-			case 0:
+			if (!next(&n_it))
 				n_step(&st);
-				break;
-			case 1:
-				n_step_border(&st);
-				break;
-			case 2:
-				if (k_it.pos != 0) {
-					last_n_step_before_k(&st);
-				} else {
-					last_n_step(&st);
-				}
-				break;
-			}
+			else if (k_it.pos != 0)
+				last_n_step_before_k(&st);
+			else
+				last_n_step(&st);
 			do {
 				m_it_bak = m_it;
-				switch(next(&m_it)) {
-				case 0:
+				if (!next(&m_it))
 					m_step(&st);
-					break;
-				case 1:
-					m_step_border(&st);
-					break;
-				case 2:
-					if (n_it.pos != 0) {
-						last_m_step_before_n(&st);
-					} else if (k_it.pos != 0) {
-						last_m_step_before_k(&st);
-					} else {
-						last_m_step(&st);
-					}
-					break;
-				}
+				else if (n_it.pos != 0)
+					last_m_step_before_n(&st);
+				else if (k_it.pos != 0)
+					last_m_step_before_k(&st);
+				else
+					last_m_step(&st);
 				kernel_loop(&st);
 			} while (m_it.pos != 0);
 		} while (n_it.pos != 0);

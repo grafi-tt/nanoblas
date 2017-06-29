@@ -22,7 +22,7 @@ static inline int is_packed(prepack_state_t *st) {
 #define pack_all JOIN(NAMESPACE, FSIZE_PREFIX, pack_all)
 static inline void pack_all(prepack_state_t *st, kernel_pack_t *kernel_pack) {
 	if (st->remained_next_slice_len > 0) {
-		while (st->remained_next_slice_len >= st->slice_len) {
+		while (st->remained_next_slice_len > st->slice_len) {
 			kernel_pack(st);
 			st->next_cur = (const FTYPE *)((uintptr_t)st->next_bak + st->interval_mn * st->slice_len);
 			st->next_bak = st->next_cur;
@@ -66,6 +66,12 @@ static inline void step_prepack(prepack_state_t *st) {
 static inline void limit_prepack(prepack_state_t *st, int sum_next_slice_len) {
 	st->remained_next_slice_len = sum_next_slice_len;
 	st->next_slice_real_len = imin(st->slice_len, st->remained_next_slice_len);
+}
+
+#define proceed_prepack JOIN(NAMESPACE, FSIZE_PREFIX, proceed_prepack)
+static inline void proceed_prepack(prepack_state_t *st, int next_slice_len) {
+	st->remained_next_slice_len = next_slice_len;
+	st->next_slice_real_len = next_slice_len;
 }
 
 #define restart_prepack JOIN(NAMESPACE, FSIZE_PREFIX, restart_prepack)

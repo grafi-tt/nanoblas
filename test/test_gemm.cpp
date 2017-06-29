@@ -17,12 +17,12 @@ bool run_test_set(std::mt19937 gen, nanoblas_t nb) {
 	auto dgemm_impl = get_gemm_impl<double>(nb);
 
 	bool s = false;
+	s = run_test(gen, sgemm_impl, 200, 200, 200) || s;
+	s = run_test(gen, dgemm_impl, 200, 200, 200) || s;
 	s = run_test(gen, sgemm_impl, 4, 128, 64) || s;
 	s = run_test(gen, dgemm_impl, 4, 128, 64) || s;
 	s = run_test(gen, sgemm_impl, 512, 512, 512) || s;
 	s = run_test(gen, dgemm_impl, 512, 512, 512) || s;
-	s = run_test(gen, sgemm_impl, 200, 200, 200) || s;
-	s = run_test(gen, dgemm_impl, 200, 200, 200) || s;
 	s = run_test(gen, sgemm_impl, 200, 200, 200, 300, 300, 300) || s;
 	s = run_test(gen, dgemm_impl, 200, 200, 200, 300, 300, 300) || s;
 	s = run_test(gen, sgemm_impl, 123, 456, 789) || s;

@@ -42,10 +42,9 @@ static inline int next(circular_iter_t *it) {
 	if (distance == 0) {
 		it->pos = 0;
 		it->len = it->base_len;
-		return 2;
+		return 1;
 	} else if (distance < (size_t)it->len) {
 		it->len = distance;
-		return 1;
 	}
 	return 0;
 }
