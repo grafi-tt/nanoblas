@@ -2,6 +2,11 @@ project(nanoblas C CXX ASM-ATT)
 
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 
+if(${CMAKE_C_COMPILER_ID} MATCHES "GNU|Clang")
+	set (CMAKE_C_FLAGS_DEBUG "-pg")
+	set (CMAKE_CXX_FLAGS_DEBUG "-pg")
+endif()
+
 function(nanoblas_target_setup)
 	foreach (tgt IN LISTS ARGV)
 		target_include_directories(${tgt} PRIVATE ${PROJECT_SOURCE_DIR}/src)
