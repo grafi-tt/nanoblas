@@ -27,14 +27,6 @@ bool run_test_set(std::mt19937 gen, nanoblas_t nb) {
 	return s;
 }
 
-template<typename FTYPE>
-bool run_bench_set(std::mt19937 gen, nanoblas_t nb) {
-	bool s = false;
-	auto gemm_impl = get_gemm_impl<FTYPE>(nb);
-	s = run_test(gen, gemm_impl, 1024, 1024, 1024) || s;
-	return s;
-}
-
 int main() {
 	std::mt19937 gen(314159265);
 
@@ -73,14 +65,6 @@ int main() {
 	std::cout << "avx float" << std::endl;
 	nb.f32_kernel = get_avx_kernel();
 	s = run_test_set<float>(gen, nb) || s;
-
-	nb.f32_blk_k_max_len = 256;
-	nb.f32_blk_n_max_len = 256;
-	nb.f32_kernel = get_avx_kernel();
-
-	std::cout << "benchmark" << std::endl;
-	std::cout << "avx float" << std::endl;
-	s = run_bench_set<float>(gen, nb) || s;
 
 	return s;
 }
