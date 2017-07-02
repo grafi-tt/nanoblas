@@ -14,14 +14,17 @@ int main() {
 	nanoblas_init(&nb);
 	nb.f32_kernel = nanoblas::get_avx_kernel();
 
+	/*
 	nb.f32_blk_k_max_len = 128;
 	nb.f32_blk_n_max_len = 128;
 	run_sgemm_test_set("nanoblas avx k128 n128", get_gemm_impl<float>(nb));
+	*/
 
 	nb.f32_blk_k_max_len = 256;
 	nb.f32_blk_n_max_len = 128;
 	run_sgemm_test_set("nanoblas avx k256 n128", get_gemm_impl<float>(nb));
 
+	/*
 	nb.f32_blk_k_max_len = 128;
 	nb.f32_blk_n_max_len = 256;
 	run_sgemm_test_set("nanoblas avx k128 n256", get_gemm_impl<float>(nb));
@@ -29,4 +32,5 @@ int main() {
 	nb.f32_blk_k_max_len = 256;
 	nb.f32_blk_n_max_len = 256;
 	run_sgemm_test_set("nanoblas avx k256 n256", get_gemm_impl<float>(nb));
+	*/
 }
