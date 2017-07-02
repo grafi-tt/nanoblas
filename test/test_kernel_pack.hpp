@@ -53,8 +53,8 @@ bool run_pack_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 	kernel.pack(&st);
 
 	bool s = false;
-	if (st.next_cur != mtx.data() + interval_k * len) {
-		std::cerr << "next_cur is incremented by "<<st.next_cur - mtx.data()<<", not "<<interval_k * len << std::endl;
+	if (st.next_pack_cur != tst_pack_aligned + packing_slice_len * len) {
+		std::cerr << "next_pack_cur is incremented by "<<st.next_pack_cur - tst_pack_aligned<<", not "<<packing_slice_len * len << std::endl;
 		s = true;
 	}
 	for (int i = 0; i < len; i++) {
