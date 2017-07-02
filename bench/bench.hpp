@@ -21,10 +21,11 @@ void run_test(std::mt19937 gen, const impl_t<FTYPE> &impl, const std::string &na
 	std::vector<FTYPE> A(M*lda);
 	std::vector<FTYPE> B(K*ldb);
 	std::vector<FTYPE> C(M*ldc);
+	A[0]=dist(gen);
 
-	for (auto &&v: A) v = dist(gen);
-	for (auto &&v: B) v = dist(gen);
-	for (auto &&v: C) v = dist(gen);
+	//for (auto &&v: A) v = dist(gen);
+	//for (auto &&v: B) v = dist(gen);
+	//for (auto &&v: C) v = dist(gen);
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	impl(A.data(), B.data(), C.data(), M, N, K, lda, ldb, ldc);
