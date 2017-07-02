@@ -89,15 +89,6 @@ static void last_m_step(gemm_state_t *st) {
 }
 
 static void kernel_loop(gemm_state_t *st) {
-#ifdef HAS_BUILTIN_PREFETCH
-	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
-	const FTYPE *c_next_cur = st->C_next;
-	for (int i = 0; i < m_slice_len; i++) {
-		__builtin_prefetch(c_next_cur, 1, 0);
-		c_next_cur = (FTYPE *)((uintptr_t)c_next_cur + st->kernel_st.ldc);
-	}
-#endif
-
 	const size_t n_pos = st->n_it_bak->pos;
 	const size_t n_end = n_pos + st->n_it_bak->len;
 	const int n_slice_len = st->kernel_st.prepack.mem.n_slice_len;
