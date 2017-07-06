@@ -197,7 +197,7 @@ mult_main: // 32 bytes sequence
 	negl %eax
 	andl $7, %eax
 	// displacement multiplied by -32: rcx, rdx
-	shll $5, %eax
+	shlq $5, %rax
 	subq %rax, %rcx
 	subq %rax, %rdx
 	// loop length is 32*4
@@ -206,7 +206,6 @@ mult_main: // 32 bytes sequence
 	popq %rax
 	pushq %rsi
 	// jump to loop
-	nop
 	jmp *(%rsp)
 
 mult_duffs_loop: // 32 bytes sequences
