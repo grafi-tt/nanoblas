@@ -184,21 +184,20 @@ mult_prefetch_c_end:
 	movl %eax, %esi
 	negl %esi
 	andl $7, %esi
-	// scale by 16 first
-	shll $4, %esi
-	// displacement multiplied by -32: rdx
-	leaq (%rsi, %rsi), %r8
-	subq %r8, %rcx
-	subq %r8, %rdx
-	// loop length is 16*9
-	// jump address: rdx
-	leal (%esi, %esi, 8), %esi
+	// displacement multiplied by -32: rcx, rdx
+	shll $5, %esi
+	subq %rsi, %rcx
+	subq %rsi, %rdx
+	// loop length is 32*4
+	// jump address: rsi
+	addl %esi, %esi
+	addl %esi, %esi
 	leaq mult_nopack_unroll_loop(%rip), %r8
 	addq %r8, %rsi
 	// push jump address
 	pushq %rsi
 	// jump to loop
-	nop
+.byte 0x0f, 0x1f, 0x44, 0x00, 0x00
 	jmp *(%rsp)
 	// 16 bytes alinged here
 
@@ -216,42 +215,42 @@ mult_nopack_unroll_loop:
 	vshufps $0x00, %ymm4, %ymm4, %ymm6
 	// C[0,] += a[0] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm8, %ymm6, %ymm8
+	vaddps %ymm6, %ymm8, %ymm8
 	// ymm6 = [a[1], ..., a[1]]
 	vshufps $0x55, %ymm4, %ymm4, %ymm6
 	// C[1,] += a[1] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm9, %ymm6, %ymm9
+	vaddps %ymm6, %ymm9, %ymm9
 	// ymm6 = [a[2], ..., a[2]]
 	vshufps $0xAA, %ymm4, %ymm4, %ymm6
 	// C[2,] += a[2] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm10, %ymm6, %ymm10
+	vaddps %ymm6, %ymm10, %ymm10
 	// ymm6 = [a[3], ..., a[3]]
 	vshufps $0xFF, %ymm4, %ymm4, %ymm6
 	// C[3,] += a[3] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm11, %ymm6, %ymm11
+	vaddps %ymm6, %ymm11, %ymm11
 	// ymm6 = [a[4], ..., a[4]]
 	vshufps $0x00, %ymm5, %ymm5, %ymm6
 	// C[4,] += a[4] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm12, %ymm6, %ymm12
+	vaddps %ymm6, %ymm12, %ymm12
 	// ymm6 = [a[5], ..., a[5]]
 	vshufps $0x55, %ymm5, %ymm5, %ymm6
 	// C[5,] += a[5] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm13, %ymm6, %ymm13
+	vaddps %ymm6, %ymm13, %ymm13
 	// ymm6 = [a[6], ..., a[6]]
 	vshufps $0xAA, %ymm5, %ymm5, %ymm6
 	// C[6,] += a[6] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm14, %ymm6, %ymm14
+	vaddps %ymm6, %ymm14, %ymm14
 	// ymm6 = [a[7], ..., a[7]]
 	vshufps $0xFF, %ymm5, %ymm5, %ymm6
 	// C[7,] += a[7] * b
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm15, %ymm6, %ymm15
+	vaddps %ymm6, %ymm15, %ymm15
 
 	.if (\cnt+1)-\times
 	mult_nopack_macro (\cnt+1), \times
