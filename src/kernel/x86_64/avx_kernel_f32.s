@@ -284,8 +284,8 @@ mult_epilogue:
 	//    #(8 - n_slice_real_len) #n_slice_rean_len
 	movl offset_n_slice_real_len(%rdi), %eax
 	negq %rax
-	leaq loadmask(%rip), %rdx
-	vmovups (%rdx, %rax, 4), %ymm0
+	leaq loadmask(%rip), %rsi
+	vmovups (%rsi, %rax, 4), %ymm0
 
 	// load limit
 	movl offset_m_slice_real_len(%rdi), %eax
