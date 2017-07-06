@@ -97,7 +97,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm8
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm8, %ymm6, %ymm8
+	vaddps %ymm6, %ymm8, %ymm8
 	.endif
 	// ymm6 = [a[1], ..., a[1]]
 	vshufps $0x55, %ymm4, %ymm4, %ymm6
@@ -106,7 +106,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm9
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm9, %ymm6, %ymm9
+	vaddps %ymm6, %ymm9, %ymm9
 	.endif
 	// ymm6 = [a[2], ..., a[2]]
 	vshufps $0xAA, %ymm4, %ymm4, %ymm6
@@ -115,7 +115,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm10
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm10, %ymm6, %ymm10
+	vaddps %ymm6, %ymm10, %ymm10
 	.endif
 	// ymm6 = [a[3], ..., a[3]]
 	vshufps $0xFF, %ymm4, %ymm4, %ymm6
@@ -124,7 +124,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm11
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm11, %ymm6, %ymm11
+	vaddps %ymm6, %ymm11, %ymm11
 	.endif
 	// prefetch
 	.if (\cnt == 0)
@@ -151,7 +151,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm12
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm12, %ymm6, %ymm12
+	vaddps %ymm6, %ymm12, %ymm12
 	.endif
 	// ymm6 = [a[5], ..., a[5]]
 	vshufps $0x55, %ymm5, %ymm5, %ymm6
@@ -160,7 +160,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm13
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm13, %ymm6, %ymm13
+	vaddps %ymm6, %ymm13, %ymm13
 	.endif
 	// ymm6 = [a[6], ..., a[6]]
 	vshufps $0xAA, %ymm5, %ymm5, %ymm6
@@ -169,7 +169,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm14
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm14, %ymm6, %ymm14
+	vaddps %ymm6, %ymm14, %ymm14
 	.endif
 	// ymm6 = [a[7], ..., a[7]]
 	vshufps $0xFF, %ymm5, %ymm5, %ymm6
@@ -178,7 +178,7 @@ mult_prologue:
 	vmulps %ymm6, %ymm7, %ymm15
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm15, %ymm6, %ymm15
+	vaddps %ymm6, %ymm15, %ymm15
 	.endif
 
 	.if (\cnt+1)-\times
@@ -209,15 +209,32 @@ mult_main: // 32 bytes sequence
 	nop
 	jmp *(%rsp)
 
-mult_duffs_loop:
+mult_duffs_loop: // 32 bytes sequences
 .macro mult_duffs_macro cnt=0, times
-	.balign 16
+	//.balign 16
 	// ymm5 = (a[8:4], a[8:4]); ymm4 = (a[4:0], a[4:0])
+	.if \cnt == 4
+	// vmovaps 0(%rcx), %ymm7
+	.byte 0xc5, 0xfc, 0x28, 0x61, 0x00
+	.else
 	vmovaps 32*\cnt-128(%rcx), %ymm4
+	.endif
+
 	vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm4, %ymm5
+	.if \cnt == 4
+	// vinsertf128 $1, 0(%rcx), %ymm4, %ymm4
+	.byte 0xc4, 0xe3, 0x5d, 0x18, 0x61, 0x00, 0x01
+	.else
 	vinsertf128 $1, 32*\cnt-128(%rcx), %ymm4, %ymm4
+	.endif
+
 	// ymm7 = b
+	.if \cnt == 4
+	// vmovaps 0(%rdx), %ymm7
+	.byte 0xc5, 0xfc, 0x28, 0x7a, 0x00
+	.else
 	vmovaps 32*\cnt-128(%rdx), %ymm7
+	.endif
 
 	// ymm6 = [a[0], ..., a[0]]
 	vshufps $0x00, %ymm4, %ymm4, %ymm6
@@ -398,7 +415,6 @@ kernel_pack:
 	vmovups (%rdx, %rsi, 4), %ymm0
 
 	// loop (LSD)
-.balign 16
 pack_no_trans_loop:
 	vmaskmovps (%r8), %ymm0, %ymm1
 	vmovaps %ymm1, (%r9)
@@ -515,9 +531,9 @@ pack_trans_loop:
 	vshufps $0x4E, %ymm1, %ymm0, %ymm8
 	vshufps $0x4E, %ymm3, %ymm2, %ymm9
 	// first half hi4 lo0
-	vblendps $0xCC, %ymm8, %ymm0, %ymm10
+	vblendps $0x33, %ymm0, %ymm8, %ymm10
 	// second half hi4 lo0
-	vblendps $0xCC, %ymm9, %ymm2, %ymm11
+	vblendps $0x33, %ymm2, %ymm9, %ymm11
 	// 0
 	vperm2f128 $0x20, %ymm11, %ymm10, %ymm12
 	vmovaps %ymm12, (%r9)
@@ -525,9 +541,9 @@ pack_trans_loop:
 	vperm2f128 $0x31, %ymm11, %ymm10, %ymm13
 	vmovaps %ymm13, -128(%r10)
 	// first half hi5 lo1
-	vblendps $0x33, %ymm8, %ymm1, %ymm10
+	vblendps $0xCC, %ymm1, %ymm8, %ymm10
 	// second half hi5 lo1
-	vblendps $0x33, %ymm9, %ymm3, %ymm11
+	vblendps $0xCC, %ymm3, %ymm9, %ymm11
 	// 1
 	vperm2f128 $0x20, %ymm11, %ymm10, %ymm14
 	vmovaps %ymm14, 32(%r9)
@@ -539,9 +555,9 @@ pack_trans_loop:
 	vshufps $0x4E, %ymm5, %ymm4, %ymm8
 	vshufps $0x4E, %ymm7, %ymm6, %ymm9
 	// first half hi6 lo2
-	vblendps $0xCC, %ymm8, %ymm4, %ymm10
+	vblendps $0x33, %ymm4, %ymm8, %ymm10
 	// second half hi6 lo2
-	vblendps $0xCC, %ymm9, %ymm6, %ymm11
+	vblendps $0x33, %ymm6, %ymm9, %ymm11
 	// 2
 	vperm2f128 $0x20, %ymm11, %ymm10, %ymm12
 	vmovaps %ymm12, 64(%r9)
@@ -549,9 +565,9 @@ pack_trans_loop:
 	vperm2f128 $0x31, %ymm11, %ymm10, %ymm13
 	vmovaps %ymm13, -64(%r10)
 	// first half hi7 lo3
-	vblendps $0x33, %ymm8, %ymm5, %ymm10
+	vblendps $0xCC, %ymm5, %ymm8, %ymm10
 	// second half hi7 lo3
-	vblendps $0x33, %ymm9, %ymm7, %ymm11
+	vblendps $0xCC, %ymm7, %ymm9, %ymm11
 	// 3
 	vperm2f128 $0x20, %ymm11, %ymm10, %ymm14
 	vmovaps %ymm14, 96(%r9)
