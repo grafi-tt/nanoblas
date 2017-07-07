@@ -39,8 +39,8 @@ _nanoblas_f32_avx_kernel_mult:
 nanoblas_f32_avx_kernel_mult:
 kernel_mult:
 	// stack layout
-	// | 0 (32bytes) | temporary (32bytes) | old r15, r14, r13, r12 | some padding | old rbp | ret addr |
-	//                                        64bytes aligned here -+              +- current rbp
+	// | temporary (128bytes) | 0 (32bytes) | old r15, r14, r13, r12 | some padding | old rbp | ret addr |
+	//                                         64bytes aligned here -+              +- current rbp
 	pushq %rbp
 	movq %rsp, %rbp
 	andq $-64, %rsp
@@ -48,9 +48,9 @@ kernel_mult:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-	subq $64, %rsp
+	subq $160, %rsp
 	vxorps %ymm0, %ymm0, %ymm0
-	vmovaps %ymm0, (%rsp)
+	vmovaps %ymm0, 128(%rsp)
 
 	// rcx: a_cur, rdx: b_cur
 	// shifted by 128 for shorter instruction encoding
@@ -295,13 +295,19 @@ mult_duffs_loop: // 32 bytes sequences
 	movq %rdx, offset_b_pack_cur(%rdi)
 
 mult_epilogue:
+	// rsi holds 0 address
+	leaq 128(%rsp), %rsi
+
 	// create mask to load C
 	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
 	//    #(8 - n_slice_real_len) #n_slice_rean_len
 	movl offset_n_slice_real_len(%rdi), %eax
-	negq %rax
-	leaq loadmask(%rip), %rsi
-	vmovups (%rsi, %rax, 4), %ymm0
+	shll $2, %eax
+	pushq %rax
+	leaq loadmask(%rip), %rax
+	subq (%rsp), %rax
+	vmovups (%rax), %ymm0
+	popq %rax
 
 	// load limit
 	movl offset_m_slice_real_len(%rdi), %eax
@@ -318,7 +324,7 @@ mult_epilogue:
 	leaq (%r9, %r9), %r10
 	addq %r8, %r9
 	cmpl $1, %eax
-	cmovle %rsp, %r9
+	cmovle %rsi, %r9
 	vmaskmovps (%r9), %ymm0, %ymm1
 	vaddps %ymm9, %ymm1, %ymm9
 	vmaskmovps %ymm9, %ymm0, (%r9)
@@ -326,7 +332,7 @@ mult_epilogue:
 	leaq (%r12, %r10), %r14
 	addq %r8, %r10
 	cmpl $2, %eax
-	cmovle %rsp, %r10
+	cmovle %rsi, %r10
 	vmaskmovps (%r10), %ymm0, %ymm1
 	vaddps %ymm10, %ymm1, %ymm10
 	vmaskmovps %ymm10, %ymm0, (%r10)
@@ -334,37 +340,37 @@ mult_epilogue:
 	leaq (%r12, %r11), %r15
 	addq %r8, %r11
 	cmpl $3, %eax
-	cmovle %rsp, %r11
+	cmovle %rsi, %r11
 	vmaskmovps (%r11), %ymm0, %ymm1
 	vaddps %ymm11, %ymm1, %ymm11
 	vmaskmovps %ymm11, %ymm0, (%r11)
 	// ymm12 = c[4,]
 	cmpl $4, %eax
-	cmovle %rsp, %r12
+	cmovle %rsi, %r12
 	vmaskmovps (%r12), %ymm0, %ymm1
 	vaddps %ymm12, %ymm1, %ymm12
 	vmaskmovps %ymm12, %ymm0, (%r12)
 	// ymm13 = c[5,]
 	cmpl $5, %eax
-	cmovle %rsp, %r13
+	cmovle %rsi, %r13
 	vmaskmovps (%r13), %ymm0, %ymm1
 	vaddps %ymm13, %ymm1, %ymm13
 	vmaskmovps %ymm13, %ymm0, (%r13)
 	// ymm14 = c[6,]
 	cmpl $6, %eax
-	cmovle %rsp, %r14
+	cmovle %rsi, %r14
 	vmaskmovps (%r14), %ymm0, %ymm1
 	vaddps %ymm14, %ymm1, %ymm14
 	vmaskmovps %ymm14, %ymm0, (%r14)
 	// ymm15 = c[7,]
 	cmpl $7, %eax
-	cmovle %rsp, %r15
+	cmovle %rsi, %r15
 	vmaskmovps (%r15), %ymm0, %ymm1
 	vaddps %ymm15, %ymm1, %ymm15
 	vmaskmovps %ymm15, %ymm0, (%r15)
 
 	// return
-	addq $64, %rsp
+	addq $160, %rsp
 	popq %r15
 	popq %r14
 	popq %r13
