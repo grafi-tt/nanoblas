@@ -8,10 +8,14 @@
 struct nanoblas_f32_kernel_state_t {
 	const float *a_pack_cur;
 	const float *b_pack_cur;
+	float *c_buf;
 	float *c_cur;
+	float *c_next_cur;
 	const ptrdiff_t ldc;
 	int m_slice_real_len;
 	int n_slice_real_len;
+	int m_next_slice_real_len;
+	int n_next_slice_real_len;
 	int k_len;
 	int current_prepack;
 	float *a_pack;
@@ -45,10 +49,14 @@ struct nanoblas_f32_kernel_state_t {
 struct _nanoblas_f32_kernel_state_former_t {
 	const float *a_pack_cur;
 	const float *b_pack_cur;
+	float *c_buf;
 	float *c_cur;
+	float *c_next_cur;
 	const ptrdiff_t ldc;
 	int m_slice_real_len;
 	int n_slice_real_len;
+	int m_next_slice_real_len;
+	int n_next_slice_real_len;
 	int k_len;
 	int current_prepack;
 	float *a_pack;
@@ -72,10 +80,14 @@ nanoblas_f32_current_prepack_p(nanoblas_f32_kernel_state_t *st) {
 struct nanoblas_f64_kernel_state_t {
 	const double *a_pack_cur;
 	const double *b_pack_cur;
+	double *c_buf;
 	double *c_cur;
+	double *c_next_cur;
 	const ptrdiff_t ldc;
 	int m_slice_real_len;
 	int n_slice_real_len;
+	int m_next_slice_real_len;
+	int n_next_slice_real_len;
 	int k_len;
 	int current_prepack;
 	double *a_pack;
@@ -109,10 +121,14 @@ struct nanoblas_f64_kernel_state_t {
 struct _nanoblas_f64_kernel_state_former_t {
 	const double *a_pack_cur;
 	const double *b_pack_cur;
+	double *c_buf;
 	double *c_cur;
+	double *c_next_cur;
 	const ptrdiff_t ldc;
 	int m_slice_real_len;
 	int n_slice_real_len;
+	int m_next_slice_real_len;
+	int n_next_slice_real_len;
 	int k_len;
 	int current_prepack;
 	double *a_pack;

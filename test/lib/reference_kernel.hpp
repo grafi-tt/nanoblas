@@ -25,21 +25,42 @@ void reference_kernel_pack(prepack_state_t<FTYPE> *prepack_st) {
 
 template<typename FTYPE>
 void reference_kernel_mult(kernel_state_t<FTYPE> *kernel_st, int m_slice_len, int n_slice_len) {
-	for (int k = 0; k < kernel_st->k_len; k++) {
-		for (int m = 0; m < m_slice_len; m++) {
-			for (int n = 0; n < n_slice_len; n++) {
-				if (m < kernel_st->m_slice_real_len && n < kernel_st->n_slice_real_len) {
-					FTYPE *c_cur = reinterpret_cast<FTYPE *>(
-							reinterpret_cast<uintptr_t>(kernel_st->c_cur) + kernel_st->ldc * m) + n;
-					*c_cur += kernel_st->a_pack_cur[m_slice_len * k + m] *
-							kernel_st->b_pack_cur[n_slice_len * k + n];
-				}
+	// acc to buf
+	for (int l = 0; l < kernel_st->k_len; l++) {
+		for (int i = 0; i < m_slice_len; i++) {
+			for (int j = 0; j < n_slice_len; j++) {
+				kernel_st->c_buf[n_slice_len*i + j] +=
+					kernel_st->a_pack_cur[m_slice_len*l + i] * kernel_st->b_pack_cur[n_slice_len*l + j];
 			}
 		}
 	}
+	// store
+	for (int i = 0; i < m_slice_len; i++) {
+		for (int j = 0; j < n_slice_len; j++) {
+			if (i < kernel_st->m_slice_real_len && j < kernel_st->n_slice_real_len) {
+				FTYPE *c_cur = reinterpret_cast<FTYPE *>(
+						reinterpret_cast<uintptr_t>(kernel_st->c_cur) + kernel_st->ldc * i) + j;
+				*c_cur = kernel_st->c_buf[n_slice_len*i + j];
+			}
+		}
+	}
+	// load
+	for (int i = 0; i < m_slice_len; i++) {
+		for (int j = 0; j < n_slice_len; j++) {
+			if (i < kernel_st->m_next_slice_real_len && j < kernel_st->n_next_slice_real_len) {
+				FTYPE *c_next_cur = reinterpret_cast<FTYPE *>(
+						reinterpret_cast<uintptr_t>(kernel_st->c_next_cur) + kernel_st->ldc * i) + j;
+				kernel_st->c_buf[n_slice_len*i + j] = *c_next_cur;
+			} else {
+				kernel_st->c_buf[n_slice_len*i + j] = 0;
+			}
+		}
+	}
+
 	kernel_st->a_pack_cur += m_slice_len * kernel_st->k_len;
 	kernel_st->b_pack_cur += n_slice_len * kernel_st->k_len;
-	kernel_st->c_cur += n_slice_len;
+	kernel_st->c_cur = kernel_st->c_next_cur;
+	kernel_st->c_next_cur += n_slice_len;
 
 	if (current_prepack_p<FTYPE>(kernel_st) != nullptr) {
 		reference_kernel_pack<FTYPE>(current_prepack_p<FTYPE>(kernel_st));

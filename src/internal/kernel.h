@@ -28,19 +28,11 @@ static inline void swap_b_pack(kernel_state_t *st, kernel_pack_t *kernel_pack) {
 	st->prepack.mem.b_next_pack_cur = st->b_next_pack;
 }
 
-#define set_kernel_info JOIN(NAMESPACE, FSIZE_PREFIX, set_kernel_info)
-static inline void set_kernel_info(kernel_state_t *st,
-		int m_slice_real_len_limit, int n_slice_real_len_limit, int k_len) {
-	st->m_slice_real_len = imin(st->prepack.mem.m_slice_len, m_slice_real_len_limit);
-	st->n_slice_real_len = imin(st->prepack.mem.n_slice_len, n_slice_real_len_limit);
-	st->k_len = k_len;
-}
-
 #define kernel_state_new JOIN(NAMESPACE, FSIZE_PREFIX, kernel_state_new)
 static inline kernel_state_t kernel_state_new(
-		const FTYPE *a, const FTYPE *b,
+		const FTYPE *a, const FTYPE *b, const FTYPE *c,
 		size_t interval_m, size_t interval_n, size_t interval_k_in_a, size_t interval_k_in_b, size_t ldc,
-		FTYPE *a_pack, FTYPE *a_next_pack, FTYPE *b_pack, FTYPE *b_next_pack,
+		FTYPE *a_pack, FTYPE *a_next_pack, FTYPE *b_pack, FTYPE *b_next_pack, FTYPE *c_buf,
 		int m_slice_len, int n_slice_len,
 		int m_slice_len_limit, int n_slice_len_limit, int k_len) {
 
@@ -49,13 +41,20 @@ static inline kernel_state_t kernel_state_new(
 		.a_next_pack = a_next_pack,
 		.b_pack      = b_pack,
 		.b_next_pack = b_next_pack,
+		.c_buf       = c_buf,
 		.ldc         = sizeof(FTYPE) * ldc,
-		.k_len       = k_len,
 		.prepack.sel.a = prepack_state_new(
 				a, a_next_pack, m_slice_len, m_slice_len_limit, k_len, interval_m, interval_k_in_a),
 		.prepack.sel.b = prepack_state_new(
 				b, b_next_pack, n_slice_len, n_slice_len_limit, k_len, interval_n, interval_k_in_b),
 	};
+	st.m_next_slice_real_len = st.prepack.sel.a.next_slice_real_len;
+	st.n_next_slice_real_len = st.prepack.sel.b.next_slice_real_len;
+
+	for (int i = 0; i < m_slice_len; i++)
+		for (int j = 0; j < n_slice_len; j++)
+			st.c_buf[m_slice_len*i + j] =
+				i < st.m_next_slice_real_len && j < st.n_next_slice_real_len ? c[ldc*i + j] : 0;
 	return st;
 }
 

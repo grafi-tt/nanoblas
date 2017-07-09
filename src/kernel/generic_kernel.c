@@ -5,23 +5,15 @@
 
 #define generic_kernel_mult JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_mult_, M_SLICE_LEN, x, N_SLICE_LEN)
 void generic_kernel_mult (kernel_state_t *kernel_st) {
-	FTYPE c_buf[M_SLICE_LEN*N_SLICE_LEN];
+	FTYPE *restrict c_buf = kernel_st->c_buf;
 	FTYPE *restrict c_buf_cur = c_buf;
 	FTYPE *restrict c_cur = kernel_st->c_cur;
+	FTYPE *restrict c_next_cur = kernel_st->c_next_cur;
 
 	const int m_slice_real_len = kernel_st->m_slice_real_len;
 	const int n_slice_real_len = kernel_st->n_slice_real_len;
-
-	/* load c */
-	for (int i = 0; i < M_SLICE_LEN; i++) {
-		for (int j = 0; j < N_SLICE_LEN; j++) {
-			c_buf_cur[j] = i < m_slice_real_len && j < n_slice_real_len ? c_cur[j] : 0;
-		}
-		c_buf_cur += N_SLICE_LEN;
-		c_cur = (FTYPE *)((char *)c_cur + kernel_st->ldc);
-	}
-	c_buf_cur = c_buf;
-	c_cur = kernel_st->c_cur;
+	const int m_next_slice_real_len = kernel_st->m_next_slice_real_len;
+	const int n_next_slice_real_len = kernel_st->n_next_slice_real_len;
 
 	const FTYPE *restrict a_pack_cur = kernel_st->a_pack_cur;
 	const FTYPE *restrict b_pack_cur = kernel_st->b_pack_cur;
@@ -59,11 +51,11 @@ void generic_kernel_mult (kernel_state_t *kernel_st) {
 		/* pack */
 		FTYPE v = (slice_pos < next_slice_real_len) ? *next_cur : 0;
 		*next_pack_cur++ = v;
-		next_cur = (const FTYPE *)((const char *)next_cur + interval_mn);
+		next_cur = (const FTYPE *)((uintptr_t)next_cur + interval_mn);
 		int moving_up = ++slice_pos == slice_len;
 		moving_up = -moving_up;
 		pack_len += moving_up;
-		next_cur = (const FTYPE *)((const char*)next_cur + (proceed_k & moving_up));
+		next_cur = (const FTYPE *)((uintptr_t)next_cur + (proceed_k & moving_up));
 		/* ANDN instruction would be used on Haswell/Piledriver or newer*/
 		slice_pos &= ~moving_up;
 	} while (pack_len);
@@ -88,7 +80,7 @@ void generic_kernel_mult (kernel_state_t *kernel_st) {
 	} while (--k_len);
 	loop_end:
 
-	/* store c */
+	/* store current c */
 	for (int i = 0; i < M_SLICE_LEN; i++) {
 		for (int j = 0; j < N_SLICE_LEN; j++) {
 			if (i < m_slice_real_len && j < n_slice_real_len) {
@@ -96,13 +88,28 @@ void generic_kernel_mult (kernel_state_t *kernel_st) {
 			}
 		}
 		c_buf_cur += N_SLICE_LEN;
-		c_cur = (FTYPE *)((char *)c_cur + kernel_st->ldc);
+		c_cur = (FTYPE *)((uintptr_t)c_cur + kernel_st->ldc);
+	}
+	c_buf_cur = c_buf;
+
+	/* load next c */
+	for (int i = 0; i < M_SLICE_LEN; i++) {
+		for (int j = 0; j < N_SLICE_LEN; j++) {
+			if (i < m_next_slice_real_len && j < n_next_slice_real_len) {
+				c_buf_cur[j] = c_next_cur[j];
+			} else {
+				c_buf_cur[j] = 0;
+			}
+		}
+		c_buf_cur += N_SLICE_LEN;
+		c_next_cur = (FTYPE *)((uintptr_t)c_next_cur + kernel_st->ldc);
 	}
 
 	/* save cur */
 	kernel_st->a_pack_cur = a_pack_cur;
 	kernel_st->b_pack_cur = b_pack_cur;
-	kernel_st->c_cur += N_SLICE_LEN;
+	kernel_st->c_cur = kernel_st->c_next_cur;
+	kernel_st->c_next_cur += N_SLICE_LEN;
 }
 
 #define generic_kernel_pack JOIN(NAMESPACE, FSIZE_PREFIX, generic_kernel_pack_, M_SLICE_LEN, x, N_SLICE_LEN)

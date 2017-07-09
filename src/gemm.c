@@ -39,6 +39,7 @@ static void k_step(gemm_state_t *st) {
 			st->A + st->kernel_st.prepack.mem.interval_k_in_a * st->k_it->pos);
 	st->B_next_k = (const FTYPE *)((uintptr_t)
 			st->B + st->kernel_st.prepack.mem.interval_k_in_b * st->k_it->pos);
+	st->kernel_st.k_len = st->k_it_bak->len;
 }
 
 static void n_step(gemm_state_t *st) {
@@ -61,6 +62,7 @@ static void m_step(gemm_state_t *st) {
 	proceed_prepack(current_prepack_p(&st->kernel_st), st->m_it->len);
 
 	st->kernel_st.c_cur = st->C_next;
+	st->kernel_st.c_next_cur = st->C_next + st->kernel_st.prepack.mem.n_slice_len;
 	const int m_slice_len = st->kernel_st.prepack.mem.m_slice_len;
 	st->C_next = (FTYPE *)((uintptr_t)st->C_next + st->kernel_st.ldc * m_slice_len);
 }
@@ -89,18 +91,38 @@ static void last_m_step(gemm_state_t *st) {
 }
 
 static void kernel_loop(gemm_state_t *st) {
-	const size_t n_pos = st->n_it_bak->pos;
-	const size_t n_end = n_pos + st->n_it_bak->len;
 	const int n_slice_len = st->kernel_st.prepack.mem.n_slice_len;
+	st->kernel_st.m_slice_real_len = st->kernel_st.m_next_slice_real_len;
+	st->kernel_st.n_slice_real_len = n_slice_len;
 
-	for (size_t n_cur = n_pos; n_cur < n_end; n_cur += n_slice_len) {
-		set_kernel_info(&st->kernel_st, st->m_it_bak->len, (int)(n_end - n_cur), st->k_it_bak->len);
-
+	int remained_len = st->n_it_bak->len - 2*n_slice_len;
+	while (remained_len > 0) {
 		st->kernel_mult(&st->kernel_st);
-
 		st->kernel_st.a_pack_cur = st->kernel_st.a_pack;
 		update_prepack(&st->kernel_st);
+		remained_len -= n_slice_len;
 	}
+	remained_len += n_slice_len;
+	if (remained_len > 0) {
+		st->kernel_st.n_next_slice_real_len = remained_len;
+
+		st->kernel_mult(&st->kernel_st);
+		st->kernel_st.a_pack_cur = st->kernel_st.a_pack;
+		update_prepack(&st->kernel_st);
+
+		st->kernel_st.n_slice_real_len = remained_len;
+	} else {
+		st->kernel_st.n_slice_real_len = remained_len + n_slice_len;
+	}
+
+	st->kernel_st.c_next_cur = st->C_next;
+	st->kernel_st.m_next_slice_real_len = st->m_it->len;
+	st->kernel_st.n_next_slice_real_len = imin(n_slice_len, st->n_it->len);
+
+	st->kernel_mult(&st->kernel_st);
+	st->kernel_st.a_pack_cur = st->kernel_st.a_pack;
+	update_prepack(&st->kernel_st);
+
 	st->kernel_st.b_pack_cur = st->kernel_st.b_pack;
 }
 
@@ -140,12 +162,13 @@ void gemm(const nanoblas_t *nb,
 	const size_t blk_k_max_len = ((nb->blk_k_max_len - 1)/k_unit_len + 1) * k_unit_len;
 
 	/* allocate pack (VLA) */
-	FTYPE mem[2*m_slice_len*blk_k_max_len + 2*blk_n_max_len*blk_k_max_len + 32/sizeof(FTYPE)];
+	FTYPE mem[2*m_slice_len*blk_k_max_len + 2*blk_n_max_len*blk_k_max_len + m_slice_len*n_slice_len + 32/sizeof(FTYPE)];
 	FTYPE *mem_aligned = (FTYPE *)((uintptr_t)mem + (-(uintptr_t)mem & 31));
 	FTYPE *a_pack      = mem_aligned;
 	FTYPE *a_next_pack = mem_aligned +   m_slice_len*blk_k_max_len;
 	FTYPE *b_pack      = mem_aligned + 2*m_slice_len*blk_k_max_len;
-	FTYPE *b_next_pack = mem_aligned + 2*m_slice_len*blk_k_max_len + blk_n_max_len*blk_k_max_len;
+	FTYPE *b_next_pack = mem_aligned + 2*m_slice_len*blk_k_max_len +   blk_n_max_len*blk_k_max_len;
+	FTYPE *c_buf       = mem_aligned + 2*m_slice_len*blk_k_max_len + 2*blk_n_max_len*blk_k_max_len;
 
 	/* get interval */
 	const ptrdiff_t interval_m      = TransA == CblasNoTrans ? lda : 1;
@@ -169,8 +192,8 @@ void gemm(const nanoblas_t *nb,
 		.kernel_mult = kernel.mult,
 		.kernel_pack = kernel.pack,
 		.kernel_st = kernel_state_new(
-				A, B, interval_m, interval_n, interval_k_in_a, interval_k_in_b, ldc,
-				a_pack, a_next_pack, b_pack, b_next_pack, m_slice_len, n_slice_len,
+				A, B, C, interval_m, interval_n, interval_k_in_a, interval_k_in_b, ldc,
+				a_pack, a_next_pack, b_pack, b_next_pack, c_buf, m_slice_len, n_slice_len,
 				m_it.len, n_it.len, k_it.len),
 		.m_it     = &m_it,
 		.m_it_bak = &m_it_bak,
