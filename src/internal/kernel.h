@@ -30,7 +30,7 @@ static inline void swap_b_pack(kernel_state_t *st, kernel_pack_t *kernel_pack) {
 
 #define kernel_state_new JOIN(NAMESPACE, FSIZE_PREFIX, kernel_state_new)
 static inline kernel_state_t kernel_state_new(
-		const FTYPE *a, const FTYPE *b, const FTYPE *c,
+		const FTYPE *a, const FTYPE *b, FTYPE *c,
 		size_t interval_m, size_t interval_n, size_t interval_k_in_a, size_t interval_k_in_b, size_t ldc,
 		FTYPE *a_pack, FTYPE *a_next_pack, FTYPE *b_pack, FTYPE *b_next_pack, FTYPE *c_buf,
 		int m_slice_len, int n_slice_len,
@@ -41,6 +41,7 @@ static inline kernel_state_t kernel_state_new(
 		.a_next_pack = a_next_pack,
 		.b_pack      = b_pack,
 		.b_next_pack = b_next_pack,
+		.c_next_cur  = c + n_slice_len,
 		.c_buf       = c_buf,
 		.ldc         = sizeof(FTYPE) * ldc,
 		.prepack.sel.a = prepack_state_new(
@@ -53,7 +54,7 @@ static inline kernel_state_t kernel_state_new(
 
 	for (int i = 0; i < m_slice_len; i++)
 		for (int j = 0; j < n_slice_len; j++)
-			st.c_buf[m_slice_len*i + j] =
+			st.c_buf[n_slice_len*i + j] =
 				i < st.m_next_slice_real_len && j < st.n_next_slice_real_len ? c[ldc*i + j] : 0;
 	return st;
 }
