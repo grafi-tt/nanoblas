@@ -29,6 +29,94 @@ loadmask:
 .float 0
 .endr
 
+.macro mult_load0
+movq %r10, %r12
+leaq (%r12, %r9), %r13
+leaq (%r9, %r9), %r10
+vmaskmovps (%r8), %ymm0, %ymm1
+vmovaps %ymm1, (%rsp)
+.endm
+.macro mult_load1
+addq %r8, %r9
+cmpl $1, %eax
+cmovle %rsi, %r9
+vmaskmovps (%r9), %ymm0, %ymm1
+vmovaps %ymm1, 32(%rsp)
+.endm
+.macro mult_load2
+leaq (%r12, %r10), %r14
+addq %r8, %r10
+cmpl $2, %eax
+cmovle %rsi, %r10
+vmaskmovps (%r10), %ymm0, %ymm1
+vmovaps %ymm1, 64(%rsp)
+.endm
+.macro mult_load3
+leaq (%r12, %r11), %r15
+addq %r8, %r11
+cmpl $3, %eax
+cmovle %rsi, %r11
+vmaskmovps (%r11), %ymm0, %ymm1
+vmovaps %ymm1, 96(%rsp)
+.endm
+.macro mult_load4
+cmpl $4, %eax
+cmovle %rsi, %r12
+vmaskmovps (%r12), %ymm0, %ymm1
+vmovaps %ymm1, -128(%rsi)
+.endm
+.macro mult_load5
+cmpl $5, %eax
+cmovle %rsi, %r13
+vmaskmovps (%r13), %ymm0, %ymm1
+vmovaps %ymm1, -96(%rsi)
+.endm
+.macro mult_load6
+cmpl $6, %eax
+cmovle %rsi, %r14
+vmaskmovps (%r14), %ymm0, %ymm1
+vmovaps %ymm1, -64(%rsi)
+.endm
+.macro mult_load7
+cmpl $7, %eax
+cmovle %rsi, %r15
+vmaskmovps (%r15), %ymm0, %ymm1
+vmovaps %ymm1, -32(%rsi)
+.endm
+
+.macro mult_store0
+vaddps (%rsp), %ymm8, %ymm8
+vmaskmovps %ymm8, %ymm0, (%r8)
+.endm
+.macro mult_store1
+vaddps 32(%rsp), %ymm9, %ymm9
+vmaskmovps %ymm9, %ymm0, (%r9)
+.endm
+.macro mult_store2
+vaddps 64(%rsp), %ymm10, %ymm10
+vmaskmovps %ymm10, %ymm0, (%r10)
+.endm
+.macro mult_store3
+vaddps 96(%rsp), %ymm11, %ymm11
+vmaskmovps %ymm11, %ymm0, (%r11)
+.endm
+.macro mult_store4
+vaddps -128(%rsi), %ymm12, %ymm12
+vmaskmovps %ymm12, %ymm0, (%r12)
+.endm
+.macro mult_store5
+vaddps -96(%rsi), %ymm13, %ymm13
+vmaskmovps %ymm13, %ymm0, (%r13)
+.endm
+.macro mult_store6
+vaddps -64(%rsi), %ymm14, %ymm14
+vmaskmovps %ymm14, %ymm0, (%r14)
+.endm
+.macro mult_store7
+vaddps -32(%rsi), %ymm15, %ymm15
+vmaskmovps %ymm15, %ymm0, (%r15)
+.endm
+
 .globl _nanoblas_f32_avx_kernel_mult
 .globl nanoblas_f32_avx_kernel_mult
 .type _nanoblas_f32_avx_kernel_mult, function
@@ -39,7 +127,7 @@ _nanoblas_f32_avx_kernel_mult:
 nanoblas_f32_avx_kernel_mult:
 kernel_mult:
 	// stack layout
-	// | temporary (128bytes) | 0 (32bytes) | old r15, r14, r13, r12 | some padding | old rbp | ret addr |
+	// | temporary (256bytes) | 0 (32bytes) | old r15, r14, r13, r12 | some padding | old rbp | ret addr |
 	//                                         64bytes aligned here -+              +- current rbp
 	pushq %rbp
 	movq %rsp, %rbp
@@ -48,9 +136,9 @@ kernel_mult:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-	subq $160, %rsp
+	subq $288, %rsp
 	vxorps %ymm0, %ymm0, %ymm0
-	vmovaps %ymm0, 128(%rsp)
+	vmovaps %ymm0, 256(%rsp)
 
 	// rcx: a_cur, rdx: b_cur
 	// shifted by 128 for shorter instruction encoding
@@ -77,11 +165,12 @@ kernel_mult:
 	addq %r8, %r10
 
 mult_prologue:
-	// if <8, skip prefetch
-	cmpl $8, %eax
-	jl mult_clear_ymm
-	subl $8, %eax
+	// if <16, skip prefetch, and inspect where to jump
+	subl $16, %eax
+	jl mult_check_fallback
+	// prefetch & store
 
+mult_prefetch:
 .macro mult_prefetch_macro cnt=0, times
 	// ymm5 = (a[8:4], a[8:4]); ymm4 = (a[4:0], a[4:0])
 	vmovaps 32*\cnt-128(%rcx), %ymm4
@@ -190,6 +279,9 @@ mult_prologue:
 .endm
 	mult_prefetch_macro times=8
 
+	test %eax, %eax
+	jz mult_epilogue
+
 .balign 16
 mult_main: // 32 bytes sequence
 	// prepare for duff's device
@@ -288,15 +380,9 @@ mult_duffs_loop: // 32 bytes sequences
 	jg mult_duffs_loop
 	popq %rsi
 
-	// update cursor
-	addq $-128, %rcx
-	addq $-128, %rdx
-	movq %rcx, offset_a_pack_cur(%rdi)
-	movq %rdx, offset_b_pack_cur(%rdi)
-
 mult_epilogue:
 	// rsi holds 0 address
-	leaq 128(%rsp), %rsi
+	leaq 256(%rsp), %rsi
 
 	// create mask to load C
 	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
@@ -312,65 +398,102 @@ mult_epilogue:
 	// load limit
 	movl offset_m_slice_real_len(%rdi), %eax
 
-	// load C
-	// [ymm8^T, ..., ymm15^T]^T = C (8x8)
-	// C[0,]
-	vmaskmovps (%r8), %ymm0, %ymm1
-	vaddps %ymm8, %ymm1, %ymm8
-	vmaskmovps %ymm8, %ymm0, (%r8)
-	// ymm9 = C[1,]
-	movq %r10, %r12
-	leaq (%r12, %r9), %r13
-	leaq (%r9, %r9), %r10
-	addq %r8, %r9
-	cmpl $1, %eax
-	cmovle %rsi, %r9
-	vmaskmovps (%r9), %ymm0, %ymm1
-	vaddps %ymm9, %ymm1, %ymm9
-	vmaskmovps %ymm9, %ymm0, (%r9)
-	// ymm10 = c[2,]
-	leaq (%r12, %r10), %r14
-	addq %r8, %r10
-	cmpl $2, %eax
-	cmovle %rsi, %r10
-	vmaskmovps (%r10), %ymm0, %ymm1
-	vaddps %ymm10, %ymm1, %ymm10
-	vmaskmovps %ymm10, %ymm0, (%r10)
-	// ymm11 = c[3,]
-	leaq (%r12, %r11), %r15
-	addq %r8, %r11
-	cmpl $3, %eax
-	cmovle %rsi, %r11
-	vmaskmovps (%r11), %ymm0, %ymm1
-	vaddps %ymm11, %ymm1, %ymm11
-	vmaskmovps %ymm11, %ymm0, (%r11)
-	// ymm12 = c[4,]
-	cmpl $4, %eax
-	cmovle %rsi, %r12
-	vmaskmovps (%r12), %ymm0, %ymm1
-	vaddps %ymm12, %ymm1, %ymm12
-	vmaskmovps %ymm12, %ymm0, (%r12)
-	// ymm13 = c[5,]
-	cmpl $5, %eax
-	cmovle %rsi, %r13
-	vmaskmovps (%r13), %ymm0, %ymm1
-	vaddps %ymm13, %ymm1, %ymm13
-	vmaskmovps %ymm13, %ymm0, (%r13)
-	// ymm14 = c[6,]
-	cmpl $6, %eax
-	cmovle %rsi, %r14
-	vmaskmovps (%r14), %ymm0, %ymm1
-	vaddps %ymm14, %ymm1, %ymm14
-	vmaskmovps %ymm14, %ymm0, (%r14)
-	// ymm15 = c[7,]
-	cmpl $7, %eax
-	cmovle %rsi, %r15
-	vmaskmovps (%r15), %ymm0, %ymm1
-	vaddps %ymm15, %ymm1, %ymm15
-	vmaskmovps %ymm15, %ymm0, (%r15)
+.macro mult_load_macro cnt=0, times
+	// ymm5 = (a[8:4], a[8:4]); ymm4 = (a[4:0], a[4:0])
+	vmovaps 32*\cnt-128(%rcx), %ymm4
+	vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm4, %ymm5
+	vinsertf128 $1, 32*\cnt-128(%rcx), %ymm4, %ymm4
+	// ymm7 = b
+	vmovaps 32*\cnt-128(%rdx), %ymm7
+
+	// ymm6 = [a[0], ..., a[0]]
+	vshufps $0x00, %ymm4, %ymm4, %ymm6
+	// C[0,] += a[0] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm8, %ymm8
+	// ymm6 = [a[1], ..., a[1]]
+	vshufps $0x55, %ymm4, %ymm4, %ymm6
+	// C[1,] += a[1] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm9, %ymm9
+	// ymm6 = [a[2], ..., a[2]]
+	vshufps $0xAA, %ymm4, %ymm4, %ymm6
+	// C[2,] += a[2] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm10, %ymm10
+	// load
+	.if \cnt == 0
+	mult_load0
+	.elseif \cnt == 1
+	mult_load2
+	.elseif \cnt == 2
+	mult_load4
+	.elseif \cnt == 3
+	mult_load6
+	.endif
+	// ymm6 = [a[3], ..., a[3]]
+	vshufps $0xFF, %ymm4, %ymm4, %ymm6
+	// C[3,] += a[3] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm11, %ymm11
+	// ymm6 = [a[4], ..., a[4]]
+	vshufps $0x00, %ymm5, %ymm5, %ymm6
+	// C[4,] += a[4] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm12, %ymm12
+	// load
+	.if \cnt == 0
+	mult_load1
+	.elseif \cnt == 1
+	mult_load3
+	.elseif \cnt == 2
+	mult_load5
+	.elseif \cnt == 3
+	mult_load7
+	.endif
+	// ymm6 = [a[5], ..., a[5]]
+	vshufps $0x55, %ymm5, %ymm5, %ymm6
+	// C[5,] += a[5] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm13, %ymm13
+	// ymm6 = [a[6], ..., a[6]]
+	vshufps $0xAA, %ymm5, %ymm5, %ymm6
+	// C[6,] += a[6] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm14, %ymm14
+	// ymm6 = [a[7], ..., a[7]]
+	vshufps $0xFF, %ymm5, %ymm5, %ymm6
+	// C[7,] += a[7] * b
+	vmulps %ymm6, %ymm7, %ymm6
+	vaddps %ymm6, %ymm15, %ymm15
+
+	.if (\cnt+1)-\times
+	mult_load_macro (\cnt+1), \times
+	.else
+	addq $32*\times, %rcx
+	addq $32*\times, %rdx
+	.endif
+.endm
+mult_load_macro times=8
+
+	// update cursor
+	addq $-128, %rcx
+	addq $-128, %rdx
+	movq %rcx, offset_a_pack_cur(%rdi)
+	movq %rdx, offset_b_pack_cur(%rdi)
+
+	// add to C; store
+	mult_store0
+	mult_store1
+	mult_store2
+	mult_store3
+	mult_store4
+	mult_store5
+	mult_store6
+	mult_store7
 
 	// return
-	addq $160, %rsp
+	addq $288, %rsp
 	popq %r15
 	popq %r14
 	popq %r13
@@ -380,7 +503,7 @@ mult_epilogue:
 	ret
 
 .balign 16
-mult_clear_ymm:
+mult_check_fallback:
 	vxorps %ymm8, %ymm8, %ymm8
 	vxorps %ymm9, %ymm9, %ymm9
 	vxorps %ymm10, %ymm10, %ymm10
@@ -389,8 +512,97 @@ mult_clear_ymm:
 	vxorps %ymm13, %ymm13, %ymm13
 	vxorps %ymm14, %ymm14, %ymm14
 	vxorps %ymm15, %ymm15, %ymm15
-	jmp mult_main
 
+	subl $-8, %eax
+	jg mult_main
+	je mult_epilogue
+
+.balign 16
+mult_fallback: // 32bytes sequence
+	// %eax is loop_len-8, [-7,-1]
+	negl %eax
+	// displacement multiplied by -32: rcx, rdx
+	shll $5, %eax
+	subq %rax, %rcx
+	subq %rax, %rdx
+	// first loop is truncated
+	subq $32, %rax
+	// loop length is 32*4
+	leaq mult_duffs_through(%rip), %rsi
+	shlq $2, %rax
+	addq %rax, %rsi
+	// jump to loop
+	jmp *(%rsp)
+
+mult_duffs_through: // 32bytes sequences
+	mult_duffs_macro cnt=1, times=8
+
+mult_load_store_c:
+	// update cursor
+	addq $-128, %rcx
+	addq $-128, %rdx
+	movq %rcx, offset_a_pack_cur(%rdi)
+	movq %rdx, offset_b_pack_cur(%rdi)
+
+	// rsi holds 0 address
+	leaq 256(%rsp), %rsi
+
+	// create mask to load C
+	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
+	//    #(8 - n_slice_real_len) #n_slice_rean_len
+	movl offset_n_slice_real_len(%rdi), %eax
+	shll $2, %eax
+	pushq %rax
+	leaq loadmask(%rip), %rax
+	subq (%rsp), %rax
+	vmovups (%rax), %ymm0
+	popq %rax
+
+	// load limit
+	movl offset_m_slice_real_len(%rdi), %eax
+
+	// load C[0,]
+	mult_load0
+	// ymm8 += C[0,]; store C[0,]
+	mult_store0
+	// load C[1,]
+	mult_load1
+	// ymm9 += C[1,]; store C[1,]
+	mult_store1
+	// load C[2,]
+	mult_load2
+	// ymm10 += C[2,]; store C[2,]
+	mult_store2
+	// load C[3,]
+	mult_load3
+	// ymm11 += C[3,]; store C[3,]
+	mult_store3
+	// load C[4,]
+	mult_load4
+	// ymm12 += C[4,]; store C[4,]
+	mult_store4
+	// load C[5,]
+	mult_load5
+	// ymm13 += C[5,]; store C[5,]
+	mult_store5
+	// load C[6,]
+	mult_load6
+	// ymm14 += C[6,]; storeC[6,]
+	mult_store6
+	// load C[7,]
+	mult_load7
+	// ymm15 += C[7,]; store C[7,]
+	mult_store7
+
+	// return
+	addq $288, %rsp
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	movq %rbp, %rsp
+	popq %rbp
+	ret
 
 .balign 16
 .globl _nanoblas_f32_avx_kernel_pack
