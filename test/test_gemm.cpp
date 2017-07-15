@@ -62,9 +62,9 @@ int main() {
 	std::cout << "generic 6x4 double" << std::endl;
 	s = run_test_set<double>(gen, nb) || s;
 
-	//std::cout << "avx float" << std::endl;
-	//nb.f32_kernel = get_avx_kernel();
-	//s = run_test_set<float>(gen, nb) || s;
+	std::cout << "avx float" << std::endl;
+	nb.f32_kernel = get_avx_kernel();
+	s = run_test_set<float>(gen, nb) || s;
 
 	return s;
 }

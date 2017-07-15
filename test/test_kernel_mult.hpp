@@ -24,8 +24,8 @@ bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 	std::vector<FTYPE> c2_buf(kernel.m_slice_len * kernel.n_slice_len + 32/sizeof(FTYPE));
 	std::vector<FTYPE> c1_cur(ldc * m_slice_real_len);
 	std::vector<FTYPE> c2_cur(ldc * m_slice_real_len);
-	std::vector<FTYPE> c1_next_cur(ldc * m_slice_real_len);
-	std::vector<FTYPE> c2_next_cur(ldc * m_slice_real_len);
+	std::vector<FTYPE> c1_next_cur(ldc * m_next_slice_real_len);
+	std::vector<FTYPE> c2_next_cur(ldc * m_next_slice_real_len);
 
 	FTYPE *a_pack_aligned = aligned_ptr(a_pack);
 	FTYPE *b_pack_aligned = aligned_ptr(b_pack);
@@ -107,7 +107,7 @@ bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 			}
 		}
 	}
-	for (int i = 0; i < m_slice_real_len; i++) {
+	for (int i = 0; i < m_next_slice_real_len; i++) {
 		for (ptrdiff_t j = 0; j < ldc; j++) {
 			FTYPE x = c1_next_cur[ldc*i+j];
 			FTYPE y = c2_next_cur[ldc*i+j];

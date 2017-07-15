@@ -90,7 +90,6 @@ vmovaps %ymm1, 96(%rsi)
 .endm
 
 .macro mult_store_c0
-vaddps (%rsp), %ymm8, %ymm8
 vmaskmovps %ymm8, %ymm0, (%r8)
 .endm
 .macro mult_store_c1
@@ -174,8 +173,8 @@ kernel_mult:
 	// update cur now
 	movl %eax, %r15d
 	shll $5, %r15d
-	addq %r12, offset_a_pack_cur(%rdi)
-	addq %r12, offset_b_pack_cur(%rdi)
+	addq %r15, offset_a_pack_cur(%rdi)
+	addq %r15, offset_b_pack_cur(%rdi)
 
 	// r8: c_next_cur
 	// r9: ldc
@@ -192,7 +191,7 @@ mult_prologue:
 	// if <16, skip prefetch, and inspect where to jump
 	subl $16, %eax
 	jl mult_fallback
-	// prefetch & store
+	// prefetch & load
 
 mult_prefetch:
 .macro mult_prefetch_macro cnt=0, times
@@ -296,7 +295,7 @@ mult_prefetch:
 	// C[7,] += a[7] * b
 	.if (\cnt == 0)
 	vmulps %ymm6, %ymm7, %ymm15
-	vaddps 96(%rsi), %ymm15, %ymm14
+	vaddps 96(%rsi), %ymm15, %ymm15
 	.else
 	vmulps %ymm6, %ymm7, %ymm6
 	vaddps %ymm6, %ymm15, %ymm15
@@ -525,12 +524,12 @@ mult_store_c:
 	// create mask to store C
 	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
 	//    #(8 - n_slice_real_len) #n_slice_rean_len
-	movl offset_n_next_slice_real_len(%rdi), %eax
+	movl offset_n_slice_real_len(%rdi), %eax
 	negq %rax
 	leaq loadmask(%rip), %r12
 	vmovups (%r12, %rax, 4), %ymm0
 	// load limit
-	movl offset_m_next_slice_real_len(%rdi), %eax
+	movl offset_m_slice_real_len(%rdi), %eax
 
 	// store
 	mult_store_c0
@@ -583,6 +582,26 @@ mult_fallback:
 
 mult_duffs_through: // 32bytes sequences
 	mult_duffs_macro cnt=1, times=8
+
+	// create mask to load next C
+	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
+	//    #(8 - n_slice_real_len) #n_slice_rean_len
+	movl offset_n_next_slice_real_len(%rdi), %eax
+	negq %rax
+	leaq loadmask(%rip), %r12
+	vmovups (%r12, %rax, 4), %ymm0
+	// load limit
+	movl offset_m_next_slice_real_len(%rdi), %eax
+
+	mult_load0
+	mult_load1
+	mult_load2
+	mult_load3
+	mult_load4
+	mult_load5
+	mult_load6
+	mult_load7
+
 	jmp mult_store_c
 
 .balign 16
