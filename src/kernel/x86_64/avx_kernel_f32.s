@@ -225,42 +225,65 @@ kernel_mult:
 // 16bytes aligned
 mult_prefetch:
 .macro mult_prefetch_macro cnt=0, times
-	// ymm5 = (a[8:4], a[8:4]); ymm4 = (a[4:0], a[4:0])
-	vmovaps 32*\cnt-128(%rcx), %ymm4
-	vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm4, %ymm5
-	vinsertf128 $1, 32*\cnt-128(%rcx), %ymm4, %ymm4
-	// ymm7 = b
-	vmovaps 32*\cnt-128(%rdx), %ymm7
+	.if (\cnt % 2 == 0)
+		// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
+		vmovaps 32*\cnt-128(%rcx), %ymm5
+		vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm5, %ymm6
+		vinsertf128 $1, 32*\cnt-128(%rcx), %ymm5, %ymm5
+		// ymm7 = b
+		vmovaps 32*\cnt-128(%rdx), %ymm7
 
-	// ymm6 = [a[0], ..., a[0]]
-	vshufps $0x00, %ymm4, %ymm4, %ymm6
+		// ymm3 = (a'[8:4], a'[8:4]); ymm2 = (a'[4:0], a'[4:0])
+		vmovaps 32*\cnt-128+32(%rcx), %ymm2
+		vinsertf128 $0, 32*\cnt-128+48(%rcx), %ymm2, %ymm3
+		vinsertf128 $1, 32*\cnt-128+32(%rcx), %ymm2, %ymm2
+		// ymm4 = b'
+		vmovaps 32*\cnt-128+32(%rdx), %ymm4
+
+		.set yal, %ymm5
+		.set yah, %ymm6
+		.set yb, %ymm7
+	.else
+		.set yal, %ymm2
+		.set yah, %ymm3
+		.set yb, %ymm4
+	.endif
+	// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
+	vmovaps 32*\cnt-128(%rcx), yal
+	vinsertf128 $0, 32*\cnt-128+16(%rcx), yal, yah
+	vinsertf128 $1, 32*\cnt-128(%rcx), yal, yal
+	// ymm7 = b
+	vmovaps 32*\cnt-128(%rdx), yb
+
+	// ymm1 = [a[0], ..., a[0]]
+	vshufps $0x00, yal, yal, %ymm1
 	// C[0,] += a[0] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm8
+	vmulps %ymm1, yb, %ymm8
 	vaddps -128(%rsi), %ymm8, %ymm8
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm8, %ymm8
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm8, %ymm8
 	.endif
-	// ymm6 = [a[1], ..., a[1]]
-	vshufps $0x55, %ymm4, %ymm4, %ymm6
+	// ymm1 = [a[1], ..., a[1]]
+	vshufps $0x55, yal, yal, %ymm1
 	// C[1,] += a[1] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm9
+	vmulps %ymm1, yb, %ymm9
 	vaddps -96(%rsi), %ymm9, %ymm9
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm9, %ymm9
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm9, %ymm9
 	.endif
-	// ymm6 = [a[2], ..., a[2]]
-	vshufps $0xAA, %ymm4, %ymm4, %ymm6
+	// ymm1 = [a[2], ..., a[2]]
+	vshufps $0xAA, yal, yal, %ymm1
 	// C[2,] += a[2] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm10
+	vmulps %ymm1, yb, %ymm10
 	vaddps -64(%rsi), %ymm10, %ymm10
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm10, %ymm10
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm10, %ymm10
 	.endif
 	// prefetch
 	.if (\cnt == 0)
@@ -280,25 +303,25 @@ mult_prefetch:
 	.elseif (\cnt == 7)
 	prefetcht1 (%r14, %r13, 2)
 	.endif
-	// ymm6 = [a[3], ..., a[3]]
-	vshufps $0xFF, %ymm4, %ymm4, %ymm6
+	// ymm1 = [a[3], ..., a[3]]
+	vshufps $0xFF, yal, yal, %ymm1
 	// C[3,] += a[3] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm11
+	vmulps %ymm1, yb, %ymm11
 	vaddps -32(%rsi), %ymm11, %ymm11
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm11, %ymm11
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm11, %ymm11
 	.endif
-	// ymm6 = [a[4], ..., a[4]]
-	vshufps $0x00, %ymm5, %ymm5, %ymm6
+	// ymm1 = [a[4], ..., a[4]]
+	vshufps $0x00, yah, yah, %ymm1
 	// C[4,] += a[4] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm12
+	vmulps %ymm1, yb, %ymm12
 	vaddps (%rsi), %ymm12, %ymm12
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm12, %ymm12
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm12, %ymm12
 	.endif
 	// prefetch
 	.if (\cnt == 0)
@@ -318,35 +341,35 @@ mult_prefetch:
 	.elseif (\cnt == 7)
 	prefetcht1 (%r14, %r15)
 	.endif
-	// ymm6 = [a[5], ..., a[5]]
-	vshufps $0x55, %ymm5, %ymm5, %ymm6
+	// ymm1 = [a[5], ..., a[5]]
+	vshufps $0x55, yah, yah, %ymm1
 	// C[5,] += a[5] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm13
+	vmulps %ymm1, yb, %ymm13
 	vaddps 32(%rsi), %ymm13, %ymm13
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm13, %ymm13
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm13, %ymm13
 	.endif
-	// ymm6 = [a[6], ..., a[6]]
-	vshufps $0xAA, %ymm5, %ymm5, %ymm6
+	// ymm1 = [a[6], ..., a[6]]
+	vshufps $0xAA, yah, yah, %ymm1
 	// C[6,] += a[6] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm14
+	vmulps %ymm1, yb, %ymm14
 	vaddps 64(%rsi), %ymm14, %ymm14
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm14, %ymm14
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm14, %ymm14
 	.endif
-	// ymm6 = [a[7], ..., a[7]]
-	vshufps $0xFF, %ymm5, %ymm5, %ymm6
+	// ymm1 = [a[7], ..., a[7]]
+	vshufps $0xFF, yah, yah, %ymm1
 	// C[7,] += a[7] * b
 	.if (\cnt == 0)
-	vmulps %ymm6, %ymm7, %ymm15
+	vmulps %ymm1, yb, %ymm15
 	vaddps 96(%rsi), %ymm15, %ymm15
 	.else
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm15, %ymm15
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm15, %ymm15
 	.endif
 
 	.if (\cnt+1)-\times
@@ -385,20 +408,20 @@ mult_main: // 32 bytes sequence
 mult_duffs_loop: // 32 bytes sequences
 .macro mult_duffs_macro cnt=0, times
 	//.balign 16
-	// ymm5 = (a[8:4], a[8:4]); ymm4 = (a[4:0], a[4:0])
+	// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
 	.if \cnt == 4
-	// vmovaps 0(%rcx), %ymm7
-	.byte 0xc5, 0xfc, 0x28, 0x61, 0x00
+	// vmovaps 0(%rcx), %ymm5
+	.byte 0xc5, 0xfc, 0x28, 0x69, 0x00
 	.else
-	vmovaps 32*\cnt-128(%rcx), %ymm4
+	vmovaps 32*\cnt-128(%rcx), %ymm5
 	.endif
 
-	vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm4, %ymm5
+	vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm5, %ymm6
 	.if \cnt == 4
-	// vinsertf128 $1, 0(%rcx), %ymm4, %ymm4
-	.byte 0xc4, 0xe3, 0x5d, 0x18, 0x61, 0x00, 0x01
+	// vinsertf128 $1, 0(%rcx), %ymm5, %ymm5
+	.byte 0xc4, 0xe3, 0x55, 0x18, 0x69, 0x00, 0x01
 	.else
-	vinsertf128 $1, 32*\cnt-128(%rcx), %ymm4, %ymm4
+	vinsertf128 $1, 32*\cnt-128(%rcx), %ymm5, %ymm5
 	.endif
 
 	// ymm7 = b
@@ -414,46 +437,46 @@ mult_duffs_loop: // 32 bytes sequences
 	addq $32*\times, %rdx
 	.endif
 
-	// ymm6 = [a[0], ..., a[0]]
-	vshufps $0x00, %ymm4, %ymm4, %ymm6
+	// ymm1 = [a[0], ..., a[0]]
+	vshufps $0x00, %ymm5, %ymm5, %ymm1
 	// C[0,] += a[0] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm8, %ymm8
-	// ymm6 = [a[1], ..., a[1]]
-	vshufps $0x55, %ymm4, %ymm4, %ymm6
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm8, %ymm8
+	// ymm1 = [a[1], ..., a[1]]
+	vshufps $0x55, %ymm5, %ymm5, %ymm1
 	// C[1,] += a[1] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm9, %ymm9
-	// ymm6 = [a[2], ..., a[2]]
-	vshufps $0xAA, %ymm4, %ymm4, %ymm6
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm9, %ymm9
+	// ymm1 = [a[2], ..., a[2]]
+	vshufps $0xAA, %ymm5, %ymm5, %ymm1
 	// C[2,] += a[2] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm10, %ymm10
-	// ymm6 = [a[3], ..., a[3]]
-	vshufps $0xFF, %ymm4, %ymm4, %ymm6
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm10, %ymm10
+	// ymm1 = [a[3], ..., a[3]]
+	vshufps $0xFF, %ymm5, %ymm5, %ymm1
 	// C[3,] += a[3] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm11, %ymm11
-	// ymm6 = [a[4], ..., a[4]]
-	vshufps $0x00, %ymm5, %ymm5, %ymm6
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm11, %ymm11
+	// ymm1 = [a[4], ..., a[4]]
+	vshufps $0x00, %ymm6, %ymm6, %ymm1
 	// C[4,] += a[4] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm12, %ymm12
-	// ymm6 = [a[5], ..., a[5]]
-	vshufps $0x55, %ymm5, %ymm5, %ymm6
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm12, %ymm12
+	// ymm1 = [a[5], ..., a[5]]
+	vshufps $0x55, %ymm6, %ymm6, %ymm1
 	// C[5,] += a[5] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm13, %ymm13
-	// ymm6 = [a[6], ..., a[6]]
-	vshufps $0xAA, %ymm5, %ymm5, %ymm6
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm13, %ymm13
+	// ymm1 = [a[6], ..., a[6]]
+	vshufps $0xAA, %ymm6, %ymm6, %ymm1
 	// C[6,] += a[6] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm14, %ymm14
-	// ymm6 = [a[7], ..., a[7]]
-	vshufps $0xFF, %ymm5, %ymm5, %ymm6
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm14, %ymm14
+	// ymm1 = [a[7], ..., a[7]]
+	vshufps $0xFF, %ymm6, %ymm6, %ymm1
 	// C[7,] += a[7] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm15, %ymm15
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm15, %ymm15
 
 	.if (\cnt+1)-\times
 	mult_duffs_macro (\cnt+1), \times
