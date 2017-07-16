@@ -39,15 +39,13 @@ vmovaps %ymm1, -128(%rsi)
 .endm
 .macro mult_load1
 leaq (%r8, %r9), %r14
-pushq %r14
 cmpl $1, %eax
 cmovle %r12, %r14
 vmaskmovps (%r14), %ymm0, %ymm1
 vmovaps %ymm1, -96(%rsi)
 .endm
 .macro mult_load2
-popq %r14
-addq %r9, %r14
+leaq (%r8, %r9, 2), %r14
 cmpl $2, %eax
 cmovle %r12, %r14
 vmaskmovps (%r14), %ymm0, %ymm1
@@ -69,15 +67,13 @@ vmovaps %ymm1, (%rsi)
 .endm
 .macro mult_load5
 leaq (%r10, %r9), %r14
-pushq %r14
 cmpl $5, %eax
 cmovle %r12, %r14
 vmaskmovps (%r14), %ymm0, %ymm1
 vmovaps %ymm1, 32(%rsi)
 .endm
 .macro mult_load6
-popq %r14
-addq %r9, %r14
+leaq (%r10, %r9, 2), %r14
 cmpl $6, %eax
 cmovle %r12, %r14
 vmaskmovps (%r14), %ymm0, %ymm1
@@ -147,6 +143,7 @@ vmaskmovps %ymm15, %ymm0, (%r10)
 .size nanoblas_f32_avx_kernel_mult, kernel_pack - kernel_mult
 _nanoblas_f32_avx_kernel_mult:
 nanoblas_f32_avx_kernel_mult:
+// 32bytes aligned
 kernel_mult:
 	// stack layout
 	// | temporary (256bytes) | 0 (32bytes) | old r15, r14, r13, r12 | some padding | old rbp | ret addr |
@@ -192,7 +189,7 @@ kernel_mult:
 	// defaults to no packing
 	xorl %r15d, %r15d
 	// if <24, skip prefetch or packing, and inspect where to jump
-	cmpl $24, %eax
+	cmpq $24, %rax
 	jl mult_fallback
 
 	// r12: c_next_cur
@@ -209,23 +206,23 @@ kernel_mult:
 
 	// prepare for packing
 	addq %rdi, %r15
-	// r12: next_pack_cur
-	movq offset_next_pack_cur(%r15), %r12
+	// r12: next_cur
+	movq offset_next_cur(%r15), %r12
 	// r13: interval_m (if a)
 	movq offset_interval_mn(%r15), %r13
 	cmpq $4, %r13
 	// r13: interval_k (if b)
 	cmove offset_interval_k(%r15), %r13
-	// r14: next_pack_cur + 4*interval_m_or_k
+	// r14: next_cur + 4*interval_m_or_k
 	// r15: 3*interval_m_or_k
 	leaq (%r13, %r13), %r15
 	leaq (%r15, %r15), %r14
 	addq %r13, %r15
 	addq %r12, %r14
 
-	subq $8, %rax
+	subl $8, %eax
 
-// 16bytes aligned here
+// 16bytes aligned
 mult_prefetch:
 .macro mult_prefetch_macro cnt=0, times
 	// ymm5 = (a[8:4], a[8:4]); ymm4 = (a[4:0], a[4:0])
@@ -365,9 +362,9 @@ mult_prefetch:
 	leaq 256(%rsp), %r12
 	// check eax
 	subl $16, %eax
-	jz mult_epilogue
+	jz mult_load_c
 
-// 16bytes aligned here
+// 16bytes aligned
 mult_main: // 32 bytes sequence
 	// prepare for duff's device
 	pushq %rax
@@ -463,115 +460,49 @@ mult_duffs_loop: // 32 bytes sequences
 	mult_duffs_macro times=8
 	subl $8, %eax
 	jg mult_duffs_loop
+
+mult_loop_end:
+	// prepare for mult_c_loaded
+	movl $8, %eax
+	// c is loaded?
+	// if eax was negative before loop, CF=0 and ZF=0 must holds
+	ja mult_c_loaded
+	// not loaded, so had jumped into the loop
 	popq %r14
 
-mult_epilogue:
+// 16bytes aligned
+mult_load_c:
 	// create mask to load next C
 	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
 	//    #(8 - n_slice_real_len) #n_slice_rean_len
 	movl offset_n_next_slice_real_len(%rdi), %r13d
 	negq %r13
 	leaq loadmask(%rip), %r14
-	vmovups (%r14, %r13, 4), %ymm0
+	//vmovups 0x00000000(%r14, %r13, 4), %ymm0
+.byte 0xc4, 0x81, 0x7c, 0x10, 0x84, 0xae, 0x00, 0x00, 0x00, 0x00
 	// load limit
 	movl offset_m_next_slice_real_len(%rdi), %eax
 
-// 16bytes aligned here
-mult_load:
-.macro mult_load_macro cnt=0, times
-	// ymm5 = (a[8:4], a[8:4]); ymm4 = (a[4:0], a[4:0])
-	vmovaps 32*\cnt-128(%rcx), %ymm4
-	vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm4, %ymm5
-	vinsertf128 $1, 32*\cnt-128(%rcx), %ymm4, %ymm4
-	// ymm7 = b
-	vmovaps 32*\cnt-128(%rdx), %ymm7
+	jmp mult_load
 
-	// ymm6 = [a[0], ..., a[0]]
-	vshufps $0x00, %ymm4, %ymm4, %ymm6
-	// C[0,] += a[0] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm8, %ymm8
-	// ymm6 = [a[1], ..., a[1]]
-	vshufps $0x55, %ymm4, %ymm4, %ymm6
-	// C[1,] += a[1] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm9, %ymm9
-	// ymm6 = [a[2], ..., a[2]]
-	vshufps $0xAA, %ymm4, %ymm4, %ymm6
-	// C[2,] += a[2] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm10, %ymm10
-	// load
-	.if \cnt == 0
-	mult_load0
-	.elseif \cnt == 1
-	mult_load2
-	.elseif \cnt == 2
-	mult_load4
-	.elseif \cnt == 3
-	mult_load6
-	.endif
-	// ymm6 = [a[3], ..., a[3]]
-	vshufps $0xFF, %ymm4, %ymm4, %ymm6
-	// C[3,] += a[3] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm11, %ymm11
-	// ymm6 = [a[4], ..., a[4]]
-	vshufps $0x00, %ymm5, %ymm5, %ymm6
-	// C[4,] += a[4] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm12, %ymm12
-	// load
-	.if \cnt == 0
-	mult_load1
-	.elseif \cnt == 1
-	mult_load3
-	.elseif \cnt == 2
-	mult_load5
-	.elseif \cnt == 3
-	mult_load7
-	.endif
-	// ymm6 = [a[5], ..., a[5]]
-	vshufps $0x55, %ymm5, %ymm5, %ymm6
-	// C[5,] += a[5] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm13, %ymm13
-	// ymm6 = [a[6], ..., a[6]]
-	vshufps $0xAA, %ymm5, %ymm5, %ymm6
-	// C[6,] += a[6] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm14, %ymm14
-	// ymm6 = [a[7], ..., a[7]]
-	vshufps $0xFF, %ymm5, %ymm5, %ymm6
-	// C[7,] += a[7] * b
-	vmulps %ymm6, %ymm7, %ymm6
-	vaddps %ymm6, %ymm15, %ymm15
-
-	.if (\cnt+1)-\times
-	mult_load_macro (\cnt+1), \times
-	.else
-	addq $32*\times, %rcx
-	addq $32*\times, %rdx
-	.endif
-.endm
-	mult_load_macro times=8
-
+// 16bytes aligned
+mult_c_loaded:
 	// packing checking
 	cmpq $1, %r15
 	jl mult_store_c
+	cmove %r13, %rcx
 	je mult_trans
 
 	// current_prepack
 	movl offset_current_prepack(%rdi), %r11d
 	addq %rdi, %r11
 
-	// eax: max(remained_len, 8)
-	movl offset_remained_len(%r11), %eax
-	movl $8, %esi
-	cmpl %esi, %eax
-	cmovg %esi, %eax
+	// eax: min(remained_len, 8)
+	movl offset_remained_len(%r11), %esi
+	cmpl %eax, %esi
+	cmovl %esi, %eax
 	// update remained_len now
-	subl %esi, offset_remained_len(%r11)
+	subl %eax, offset_remained_len(%r11)
 
 	// r13: next_pack_cur+128
 	movl $128, %r13d
@@ -596,8 +527,8 @@ mult_load:
 	cmove offset_interval_mn(%r11), %r9
 	// if trans required, set 1
 	sete %r15b
-	// eax: max(remained_len, 8), r10d: next_slice_real_len,  rsi: next_pack_cur+128 (no trans)
-	// eax: next_slice_real_len,  r10d: max(remained_len, 8), rsi: rsp+128  (trans)
+	// eax: min(remained_len, 8), r10d: next_slice_real_len,  rsi: next_pack_cur+128 (no trans)
+	// eax: next_slice_real_len,  r10d: min(remained_len, 8), rsi: rsp+128  (trans)
 	movl %eax, %r10d
 	cmovne offset_next_slice_real_len(%r11), %r10d
 	cmove offset_next_slice_real_len(%r11), %eax
@@ -616,12 +547,23 @@ mult_load:
 	addq %r9, %r11
 	addq %r8, %r10
 
-	jmp mult_load
+// 16bytes aligned
+mult_load:
+	mult_load0
+	mult_load1
+	mult_load2
+	mult_load3
+	mult_load4
+	mult_load5
+	mult_load6
+	mult_load7
 
-.balign 16
+	// set eax negative for distinguish
+	negl %eax
+	jmp mult_duffs_loop
+
+// 16bytes aligned
 mult_trans:
-	movq %r13, %rax
-
 	// transpose algorithm is from
 	// IA-32/64 Optimization Manual 11.11.2
 
@@ -641,13 +583,13 @@ mult_trans:
 	vunpckhpd %ymm3, %ymm2, %ymm7
 
 	vshufps $0x88, %ymm6, %ymm4, %ymm0
-	vmovaps %ymm0, -128(%rax)
+	vmovaps %ymm0, -128(%rcx)
 	vshufps $0xDD, %ymm6, %ymm4, %ymm1
-	vmovaps %ymm1, -96(%rax)
+	vmovaps %ymm1, -96(%rcx)
 	vshufps $0x88, %ymm7, %ymm5, %ymm2
-	vmovaps %ymm2, -64(%rax)
+	vmovaps %ymm2, -64(%rcx)
 	vshufps $0xDD, %ymm7, %ymm5, %ymm3
-	vmovaps %ymm3, -32(%rax)
+	vmovaps %ymm3, -32(%rcx)
 
 	// hi
 	vmovaps -112(%rsi), %xmm0
@@ -665,15 +607,15 @@ mult_trans:
 	vunpckhpd %ymm3, %ymm2, %ymm7
 
 	vshufps $0x88, %ymm6, %ymm4, %ymm0
-	vmovaps %ymm0, (%rax)
+	vmovaps %ymm0, (%rcx)
 	vshufps $0xDD, %ymm6, %ymm4, %ymm1
-	vmovaps %ymm1, 32(%rax)
+	vmovaps %ymm1, 32(%rcx)
 	vshufps $0x88, %ymm7, %ymm5, %ymm2
-	vmovaps %ymm2, 64(%rax)
+	vmovaps %ymm2, 64(%r13)
 	vshufps $0xDD, %ymm7, %ymm5, %ymm3
-	vmovaps %ymm3, 96(%rax)
+	vmovaps %ymm3, 96(%r13)
 
-// 1 (mod 16) align
+// 16 bytes aligned
 mult_store_c:
 	// r8: c_next_cur
 	// r9: ldc
@@ -738,7 +680,7 @@ mult_fallback:
 
 	subl $8, %eax
 	jg mult_main
-	je mult_epilogue
+	je mult_load_c
 
 	// %eax is loop_len-8, [-7,-1]
 	negl %eax
