@@ -163,7 +163,7 @@ kernel_mult:
 	// rcx: a_cur, rdx: b_cur, rsi: c_buf
 	// shifted by 128 for shorter instruction encoding
 	movl %ecx, %edx
-	movl %ecx, %esi
+	movq %rcx, %rsi
 	addq offset_a_pack_cur(%rdi), %rcx
 	addq offset_b_pack_cur(%rdi), %rdx
 	addq offset_c_buf(%rdi), %rsi
@@ -188,8 +188,8 @@ kernel_mult:
 
 	// defaults to no packing
 	xorl %r15d, %r15d
-	// if <24, skip prefetch or packing, and inspect where to jump
-	cmpq $24, %rax
+	// if <16, skip prefetch or packing, and inspect where to jump
+	cmpq $12, %rax
 	jl mult_fallback
 
 	// r12: c_next_cur
@@ -220,26 +220,48 @@ kernel_mult:
 	addq %r13, %r15
 	addq %r12, %r14
 
-	subl $8, %eax
+	subl $2, %eax
 
 // 16bytes aligned
 mult_prefetch:
+	// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
+	vmovaps -128(%rcx), %ymm5
+	vinsertf128 $0, -128+16(%rcx), %ymm5, %ymm6
+	vinsertf128 $1, -128(%rcx), %ymm5, %ymm5
+	// ymm7 = b
+	vmovaps -128(%rdx), %ymm7
+	// ymm3 = (a'[8:4], a'[8:4]); ymm2 = (a'[4:0], a'[4:0])
+	vmovaps -128+32(%rcx), %ymm2
+	vinsertf128 $0, -128+48(%rcx), %ymm2, %ymm3
+	vinsertf128 $1, -128+32(%rcx), %ymm2, %ymm2
+	// ymm4 = b'
+	vmovaps -128+32(%rdx), %ymm4
+
+	prefetcht1 (%r8)
+	prefetcht1 (%r8, %r9)
+	prefetcht1 (%r8, %r9, 2)
+	prefetcht1 (%r8, %r11)
+	prefetcht1 (%r10)
+	prefetcht1 (%r10, %r9)
+	prefetcht1 (%r10, %r9, 2)
+	prefetcht1 (%r10, %r11)
+
 .macro mult_prefetch_macro cnt=0, times
 	.if (\cnt % 2 == 0)
-		// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
-		vmovaps 32*\cnt-128(%rcx), %ymm5
-		vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm5, %ymm6
-		vinsertf128 $1, 32*\cnt-128(%rcx), %ymm5, %ymm5
-		// ymm7 = b
-		vmovaps 32*\cnt-128(%rdx), %ymm7
-
-		// ymm3 = (a'[8:4], a'[8:4]); ymm2 = (a'[4:0], a'[4:0])
-		vmovaps 32*\cnt-128+32(%rcx), %ymm2
-		vinsertf128 $0, 32*\cnt-128+48(%rcx), %ymm2, %ymm3
-		vinsertf128 $1, 32*\cnt-128+32(%rcx), %ymm2, %ymm2
-		// ymm4 = b'
-		vmovaps 32*\cnt-128+32(%rdx), %ymm4
-
+		.if (\cnt != 0)
+			// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
+			vmovaps 32*\cnt-128(%rcx), %ymm5
+			vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm5, %ymm6
+			vinsertf128 $1, 32*\cnt-128(%rcx), %ymm5, %ymm5
+			// ymm7 = b
+			vmovaps 32*\cnt-128(%rdx), %ymm7
+			// ymm3 = (a'[8:4], a'[8:4]); ymm2 = (a'[4:0], a'[4:0])
+			vmovaps 32*\cnt-128+32(%rcx), %ymm2
+			vinsertf128 $0, 32*\cnt-128+48(%rcx), %ymm2, %ymm3
+			vinsertf128 $1, 32*\cnt-128+32(%rcx), %ymm2, %ymm2
+			// ymm4 = b'
+			vmovaps 32*\cnt-128+32(%rdx), %ymm4
+		.endif
 		.set yal, %ymm5
 		.set yah, %ymm6
 		.set yb, %ymm7
@@ -248,12 +270,6 @@ mult_prefetch:
 		.set yah, %ymm3
 		.set yb, %ymm4
 	.endif
-	// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
-	vmovaps 32*\cnt-128(%rcx), yal
-	vinsertf128 $0, 32*\cnt-128+16(%rcx), yal, yah
-	vinsertf128 $1, 32*\cnt-128(%rcx), yal, yal
-	// ymm7 = b
-	vmovaps 32*\cnt-128(%rdx), yb
 
 	// ymm1 = [a[0], ..., a[0]]
 	vshufps $0x00, yal, yal, %ymm1
@@ -285,24 +301,6 @@ mult_prefetch:
 	vmulps %ymm1, yb, %ymm1
 	vaddps %ymm1, %ymm10, %ymm10
 	.endif
-	// prefetch
-	.if (\cnt == 0)
-	prefetcht1 (%r8)
-	.elseif (\cnt == 1)
-	prefetcht1 (%r8, %r9, 2)
-	.elseif (\cnt == 2)
-	prefetcht1 (%r10)
-	.elseif (\cnt == 3)
-	prefetcht1 (%r10, %r9, 2)
-	.elseif (\cnt == 4)
-	prefetcht1 (%r12)
-	.elseif (\cnt == 5)
-	prefetcht1 (%r12, %r13, 2)
-	.elseif (\cnt == 6)
-	prefetcht1 (%r14)
-	.elseif (\cnt == 7)
-	prefetcht1 (%r14, %r13, 2)
-	.endif
 	// ymm1 = [a[3], ..., a[3]]
 	vshufps $0xFF, yal, yal, %ymm1
 	// C[3,] += a[3] * b
@@ -322,24 +320,6 @@ mult_prefetch:
 	.else
 	vmulps %ymm1, yb, %ymm1
 	vaddps %ymm1, %ymm12, %ymm12
-	.endif
-	// prefetch
-	.if (\cnt == 0)
-	prefetcht1 (%r8, %r9)
-	.elseif (\cnt == 1)
-	prefetcht1 (%r8, %r11)
-	.elseif (\cnt == 2)
-	prefetcht1 (%r10, %r9)
-	.elseif (\cnt == 3)
-	prefetcht1 (%r10, %r11)
-	.elseif (\cnt == 4)
-	prefetcht1 (%r12, %r13)
-	.elseif (\cnt == 5)
-	prefetcht1 (%r12, %r15)
-	.elseif (\cnt == 6)
-	prefetcht1 (%r14, %r13)
-	.elseif (\cnt == 7)
-	prefetcht1 (%r14, %r15)
 	.endif
 	// ymm1 = [a[5], ..., a[5]]
 	vshufps $0x55, yah, yah, %ymm1
@@ -381,10 +361,19 @@ mult_prefetch:
 .endm
 	mult_prefetch_macro times=8
 
+	prefetcht1 (%r12)
+	prefetcht1 (%r12, %r13)
+	prefetcht1 (%r12, %r13, 2)
+	prefetcht1 (%r12, %r15)
+	prefetcht1 (%r14)
+	prefetcht1 (%r14, %r13)
+	prefetcht1 (%r14, %r13, 2)
+	prefetcht1 (%r14, %r15)
+
 	// r12 holds 0 address
 	leaq 256(%rsp), %r12
 	// check eax
-	subl $16, %eax
+	subl $10, %eax
 	jz mult_load_c
 
 // 16bytes aligned
@@ -486,48 +475,39 @@ mult_duffs_loop: // 32 bytes sequences
 	subl $8, %eax
 	jg mult_duffs_loop
 
-mult_loop_end:
-	// prepare for mult_c_loaded
-	movl $8, %eax
-	// c is loaded?
-	// if eax was negative before loop, CF=0 and ZF=0 must holds
-	ja mult_c_loaded
-	// not loaded, so had jumped into the loop
 	popq %r14
 
-// 16bytes aligned
 mult_load_c:
+	// fix cur
+	movl $128, %eax
+	subq %rax, %rcx
+	subq %rax, %rdx
+
 	// create mask to load next C
 	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
 	//    #(8 - n_slice_real_len) #n_slice_rean_len
 	movl offset_n_next_slice_real_len(%rdi), %r13d
 	negq %r13
 	leaq loadmask(%rip), %r14
-	//vmovups 0x00000000(%r14, %r13, 4), %ymm0
-.byte 0xc4, 0x81, 0x7c, 0x10, 0x84, 0xae, 0x00, 0x00, 0x00, 0x00
+	vmovups (%r14, %r13, 4), %ymm0
 	// load limit
 	movl offset_m_next_slice_real_len(%rdi), %eax
 
 	jmp mult_load
 
 // 16bytes aligned
-mult_c_loaded:
-	// packing checking
-	cmpq $1, %r15
-	jl mult_store_c
-	cmove %r13, %rcx
-	je mult_trans
-
+mult_pack:
 	// current_prepack
 	movl offset_current_prepack(%rdi), %r11d
 	addq %rdi, %r11
 
 	// eax: min(remained_len, 8)
-	movl offset_remained_len(%r11), %esi
-	cmpl %eax, %esi
-	cmovl %esi, %eax
+	movl $8, %esi
+	movl offset_remained_len(%r11), %eax
+	cmpl %esi, %eax
+	cmovg %esi, %eax
 	// update remained_len now
-	subl %eax, offset_remained_len(%r11)
+	subl %esi, offset_remained_len(%r11)
 
 	// r13: next_pack_cur+128
 	movl $128, %r13d
@@ -572,8 +552,24 @@ mult_c_loaded:
 	addq %r9, %r11
 	addq %r8, %r10
 
-// 16bytes aligned
+// 1 (mod 16) byte aligned
 mult_load:
+.macro mult_2fetch_macro
+	// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
+	vmovaps (%rcx), %ymm5
+	vinsertf128 $0, 16(%rcx), %ymm5, %ymm6
+	vinsertf128 $1, (%rcx), %ymm5, %ymm5
+	// ymm7 = b
+	vmovaps (%rdx), %ymm7
+	// ymm3 = (a'[8:4], a'[8:4]); ymm2 = (a'[4:0], a'[4:0])
+	vmovaps 32(%rcx), %ymm2
+	vinsertf128 $0, 48(%rcx), %ymm2, %ymm3
+	vinsertf128 $1, 32(%rcx), %ymm2, %ymm2
+	// ymm4 = b'
+	vmovaps 32(%rdx), %ymm4
+.endm
+	mult_2fetch_macro
+
 	mult_load0
 	mult_load1
 	mult_load2
@@ -583,12 +579,75 @@ mult_load:
 	mult_load6
 	mult_load7
 
-	// set eax negative for distinguish
-	negl %eax
-	jmp mult_duffs_loop
+.macro mult_2fma_macro cnt=0
+	.if (\cnt == 0)
+		.set yal, %ymm5
+		.set yah, %ymm6
+		.set yb, %ymm7
+	.else
+		.set yal, %ymm2
+		.set yah, %ymm3
+		.set yb, %ymm4
+	.endif
 
-// 16bytes aligned
+	// ymm1 = [a[0], ..., a[0]]
+	vshufps $0x00, yal, yal, %ymm1
+	// C[0,] += a[0] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm8, %ymm8
+	// ymm1 = [a[1], ..., a[1]]
+	vshufps $0x55, yal, yal, %ymm1
+	// C[1,] += a[1] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm9, %ymm9
+	// ymm1 = [a[2], ..., a[2]]
+	vshufps $0xAA, yal, yal, %ymm1
+	// C[2,] += a[2] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm10, %ymm10
+	// ymm1 = [a[3], ..., a[3]]
+	vshufps $0xFF, yal, yal, %ymm1
+	// C[3,] += a[3] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm11, %ymm11
+	// ymm1 = [a[4], ..., a[4]]
+	vshufps $0x00, yah, yah, %ymm1
+	// C[4,] += a[4] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm12, %ymm12
+	// ymm1 = [a[5], ..., a[5]]
+	vshufps $0x55, yah, yah, %ymm1
+	// C[5,] += a[5] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm13, %ymm13
+	// ymm1 = [a[6], ..., a[6]]
+	vshufps $0xAA, yah, yah, %ymm1
+	// C[6,] += a[6] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm14, %ymm14
+	// ymm1 = [a[7], ..., a[7]]
+	vshufps $0xFF, yah, yah, %ymm1
+	// C[7,] += a[7] * b
+	vmulps %ymm1, yb, %ymm1
+	vaddps %ymm1, %ymm15, %ymm15
+
+	.if \cnt == 0
+	mult_2fma_macro 1
+	.else
+	addq $64, %rcx
+	addq $64, %rdx
+	.endif
+.endm
+	mult_2fma_macro
+
+	// packing checking
+	cmpq $1, %r15
+	jl mult_store_c
+	jg mult_pack
+
 mult_trans:
+	movq %r13, %rcx
+
 	// transpose algorithm is from
 	// IA-32/64 Optimization Manual 11.11.2
 
@@ -636,9 +695,9 @@ mult_trans:
 	vshufps $0xDD, %ymm6, %ymm4, %ymm1
 	vmovaps %ymm1, 32(%rcx)
 	vshufps $0x88, %ymm7, %ymm5, %ymm2
-	vmovaps %ymm2, 64(%r13)
+	vmovaps %ymm2, 64(%rcx)
 	vshufps $0xDD, %ymm7, %ymm5, %ymm3
-	vmovaps %ymm3, 96(%r13)
+	vmovaps %ymm3, 96(%rcx)
 
 // 16 bytes aligned
 mult_store_c:
