@@ -409,6 +409,11 @@ mult_duffs_loop: // 32 bytes sequences
 	vmovaps 32*\cnt-128(%rdx), %ymm7
 	.endif
 
+	.if (\cnt+1)==\times
+	addq $32*\times, %rcx
+	addq $32*\times, %rdx
+	.endif
+
 	// ymm6 = [a[0], ..., a[0]]
 	vshufps $0x00, %ymm4, %ymm4, %ymm6
 	// C[0,] += a[0] * b
@@ -452,9 +457,6 @@ mult_duffs_loop: // 32 bytes sequences
 
 	.if (\cnt+1)-\times
 	mult_duffs_macro (\cnt+1), \times
-	.else
-	addq $32*\times, %rcx
-	addq $32*\times, %rdx
 	.endif
 .endm
 	mult_duffs_macro times=8
