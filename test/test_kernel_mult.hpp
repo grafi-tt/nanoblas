@@ -95,42 +95,9 @@ bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 		std::cerr << "c_cur is incremented by "<<st.c_cur - c2_cur.data()<<", not "<<kernel.n_slice_len << std::endl;
 		s = true;
 	}
-	for (int i = 0; i < m_slice_real_len; i++) {
-		for (ptrdiff_t j = 0; j < ldc; j++) {
-			FTYPE x = c1_cur[ldc*i+j];
-			FTYPE y = c2_cur[ldc*i+j];
-			if (!mostly_equal(x, y)) {
-				std::cerr <<
-					"c1_cur["<<i<<"]["<<j<<"] = "<<x<<"; " <<
-					"c2_cur["<<i<<"]["<<j<<"] = "<<y<<";" << std::endl;
-				s = true;
-			}
-		}
-	}
-	for (int i = 0; i < m_next_slice_real_len; i++) {
-		for (ptrdiff_t j = 0; j < ldc; j++) {
-			FTYPE x = c1_next_cur[ldc*i+j];
-			FTYPE y = c2_next_cur[ldc*i+j];
-			if (!mostly_equal(x, y)) {
-				std::cerr <<
-					"c1_next_cur["<<i<<"]["<<j<<"] = "<<x<<"; " <<
-					"c2_next_cur["<<i<<"]["<<j<<"] = "<<y<<";" << std::endl;
-				s = true;
-			}
-		}
-	}
-	for (int i = 0; i < kernel.m_slice_len; i++) {
-		for (int j = 0; j < kernel.n_slice_len; j++) {
-			FTYPE x = c1_buf_aligned[kernel.n_slice_len*i+j];
-			FTYPE y = c2_buf_aligned[kernel.n_slice_len*i+j];
-			if (!mostly_equal(x, y)) {
-				std::cerr <<
-					"c1_buf_aligned["<<i<<"]["<<j<<"] = "<<x<<"; " <<
-					"c2_buf_aligned["<<i<<"]["<<j<<"] = "<<y<<";" << std::endl;
-				s = true;
-			}
-		}
-	}
+	s = check_matrix(c1_cur, c2_cur, m_slice_real_len, ldc) || s;
+	s = check_matrix(c1_next_cur, c2_next_cur, m_next_slice_real_len, ldc) || s;
+	s = check_matrix(c1_buf_aligned, c2_buf_aligned, kernel.m_slice_len, kernel.n_slice_len) || s;
 	return s;
 }
 

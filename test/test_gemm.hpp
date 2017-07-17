@@ -35,20 +35,8 @@ bool run_test(std::mt19937 gen, const impl_t<FTYPE> &impl, size_t M, size_t N, s
 
 	impl(A.data()+lda, B.data()+ldb, D.data()+ldc, M, N, K, lda, ldb, ldc);
 
-	for (size_t i = 0; i < M+2; i++) {
-		for (size_t j = 0; j < N; j++) {
-			FTYPE x = C[ldc*i+j];
-			FTYPE y = D[ldc*i+j];
-			if (!mostly_equal(x, y)) {
-				std::cerr <<
-					"C["<<(long long)i-1<<"]["<<j<<"] = "<<x<<"; " <<
-					"D["<<(long long)i-1<<"]["<<j<<"] = "<<y<<";" << std::endl;
-				return true;
-			}
-		}
-	}
-
-	return false;
+	bool s = check_matrix(C, D, M+2, N, ldc, 1);
+	return s;
 }
 
 template<typename FTYPE>
