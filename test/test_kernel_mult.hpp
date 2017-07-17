@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <random>
+#include <string>
 #include <vector>
 #include "nanoblas_kernel.hpp"
 #include "lib/util.hpp"
@@ -11,8 +12,18 @@
 using namespace nanoblas;
 
 template<typename FTYPE>
-bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
+bool run_kernel_mult_test(std::mt19937 gen, const std::string &name, const kernel_t<FTYPE> &kernel,
 		int k_len, int m_slice_real_len, int n_slice_real_len, int m_next_slice_real_len, int n_next_slice_real_len, ptrdiff_t ldc) {
+	if (kernel.m_slice_len < std::max(m_slice_real_len, m_next_slice_real_len) ||
+			kernel.n_slice_len < std::max(n_slice_real_len, n_next_slice_real_len)) {
+		return false;
+	}
+
+	std::cout << "test kernel_mult: "<<name << std::endl;
+	std::cout << "k: "<<k_len<<
+		"; {m,n}_slice_real: ("<<m_slice_real_len<<", "<<n_slice_real_len<<
+		"); {m,n}_next_slice_real: ("<<m_next_slice_real_len<<", "<<n_next_slice_real_len<<")"<< std::endl;
+
 	std::uniform_real_distribution<FTYPE> dist(0, 1);
 
 	int m_slice_len = kernel.m_slice_len;
@@ -89,20 +100,22 @@ bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 	s = check_matrix(c1_cur, c2_cur, m_slice_real_len, ldc) || s;
 	s = check_matrix(c1_next_cur, c2_next_cur, m_next_slice_real_len, ldc) || s;
 	s = check_matrix(c1_buf_aligned, c2_buf_aligned, kernel.m_slice_len, kernel.n_slice_len) || s;
+
+	if (!s) std::cout << "ok" << std::endl;
 	return s;
 }
 
 template<typename FTYPE>
-bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
+bool run_kernel_mult_test(std::mt19937 gen, const std::string &name, const kernel_t<FTYPE> &kernel,
 		int k_len, int m_slice_real_len, int n_slice_real_len, int m_next_slice_real_len, int n_next_slice_real_len) {
-	return run_mult_test<FTYPE>(gen, kernel, k_len,
+	return run_kernel_mult_test<FTYPE>(gen, name, kernel, k_len,
 			m_slice_real_len, n_slice_real_len, m_next_slice_real_len, n_next_slice_real_len,
 			n_slice_real_len + n_next_slice_real_len);
 }
 
 template<typename FTYPE>
-bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel, int k_len) {
-	return run_mult_test<FTYPE>(gen, kernel, k_len, kernel.m_slice_len, kernel.n_slice_len, kernel.m_slice_len, kernel.n_slice_len);
+bool run_kernel_mult_test(std::mt19937 gen, const std::string &name, const kernel_t<FTYPE> &kernel, int k_len) {
+	return run_kernel_mult_test<FTYPE>(gen, name, kernel, k_len, kernel.m_slice_len, kernel.n_slice_len, kernel.m_slice_len, kernel.n_slice_len);
 }
 
 #endif

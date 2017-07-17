@@ -20,8 +20,8 @@ int main() {
 	run_sgemm_test_set("nanoblas avx k128 n128", get_gemm_impl<float>(nb));
 	*/
 
-	nb.f32_blk_k_max_len = 256;
-	nb.f32_blk_n_max_len = 128;
+	nb.f32_blk_k_max_len = 384;
+	nb.f32_blk_n_max_len = 384;
 	run_sgemm_test_set("nanoblas avx k256 n128", get_gemm_impl<float>(nb));
 
 	/*

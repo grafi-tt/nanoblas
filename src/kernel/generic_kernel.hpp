@@ -6,7 +6,7 @@
 
 namespace nanoblas {
 
-template<T>
+template<typename T>
 constexpr kernel_t<T> get_generic_kernel_4x4();
 
 template<>
@@ -26,7 +26,7 @@ constexpr kernel_t<double> get_generic_kernel_4x4<double>() {
 	};
 }
 
-template<T>
+template<typename T>
 constexpr kernel_t<T> get_generic_kernel_6x4();
 
 template<>
