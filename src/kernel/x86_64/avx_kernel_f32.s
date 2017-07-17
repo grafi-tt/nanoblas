@@ -374,18 +374,22 @@ mult_prefetch_end:
 mult_main:
 	// prepare for duff's device
 	pushq %rax
-	negq %rax
+	negl %eax
 	andl $7, %eax
 	// displacement multiplied by -32: rcx, rdx
 	shll $5, %eax
 	subq %rax, %rcx
 	subq %rax, %rdx
 	// loop length is 32*4
-	leaq mult_duffs_loop(%rip), %r13
-	leaq (%r13, %rax, 4), %r13
+	leaq mult_duffs_loop(%rip), %r14
+	leaq (%r14, %rax, 4), %r14
 	popq %rax
-	pushq %r13
+	pushq %r14
+	// incr
+	leaq 256(%rcx), %r13
+	leaq 256(%rdx), %r14
 	// jump to loop
+.byte 0x0f, 0x1f, 0x40, 0x00
 	jmp *(%rsp)
 
 // 16bytes aligned
@@ -414,11 +418,6 @@ mult_duffs_loop: // 32 bytes sequences
 	.byte 0xc5, 0xfc, 0x28, 0x7a, 0x00
 	.else
 	vmovaps 32*\cnt-128(%rdx), %ymm7
-	.endif
-
-	.if (\cnt+1)==\times
-	addq $32*\times, %rcx
-	addq $32*\times, %rdx
 	.endif
 
 	// ymm1 = [a[0], ..., a[0]]
@@ -464,13 +463,18 @@ mult_duffs_loop: // 32 bytes sequences
 
 	.if (\cnt+1)-\times
 	mult_duffs_macro (\cnt+1), \times
+	.else
+	movq %r13, %rcx
+	movq %r14, %rdx
+	leaq \times*32(%rcx), %r13
+	leaq \times*32(%rdx), %r14
+	subl $\times, %eax
 	.endif
 .endm
 	mult_duffs_macro times=8
-	subl $8, %eax
 	jg mult_duffs_loop
 
-	popq %r13
+	popq %r14
 
 mult_load_c:
 	// fix cur
@@ -715,7 +719,78 @@ mult_fallback:
 	// 16bytes aligned here
 
 mult_duffs_through: // 32bytes sequences
-	mult_duffs_macro cnt=1, times=8
+.macro mult_duffs_through_macro cnt=0, times
+	//.balign 16
+	// ymm6 = (a[8:4], a[8:4]); ymm5 = (a[4:0], a[4:0])
+	.if \cnt == 4
+	// vmovaps 0(%rcx), %ymm5
+	.byte 0xc5, 0xfc, 0x28, 0x69, 0x00
+	.else
+	vmovaps 32*\cnt-128(%rcx), %ymm5
+	.endif
+
+	vinsertf128 $0, 32*\cnt-128+16(%rcx), %ymm5, %ymm6
+	.if \cnt == 4
+	// vinsertf128 $1, 0(%rcx), %ymm5, %ymm5
+	.byte 0xc4, 0xe3, 0x55, 0x18, 0x69, 0x00, 0x01
+	.else
+	vinsertf128 $1, 32*\cnt-128(%rcx), %ymm5, %ymm5
+	.endif
+
+	// ymm7 = b
+	.if \cnt == 4
+	// vmovaps 0(%rdx), %ymm7
+	.byte 0xc5, 0xfc, 0x28, 0x7a, 0x00
+	.else
+	vmovaps 32*\cnt-128(%rdx), %ymm7
+	.endif
+
+	// ymm1 = [a[0], ..., a[0]]
+	vshufps $0x00, %ymm5, %ymm5, %ymm1
+	// C[0,] += a[0] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm8, %ymm8
+	// ymm1 = [a[1], ..., a[1]]
+	vshufps $0x55, %ymm5, %ymm5, %ymm1
+	// C[1,] += a[1] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm9, %ymm9
+	// ymm1 = [a[2], ..., a[2]]
+	vshufps $0xAA, %ymm5, %ymm5, %ymm1
+	// C[2,] += a[2] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm10, %ymm10
+	// ymm1 = [a[3], ..., a[3]]
+	vshufps $0xFF, %ymm5, %ymm5, %ymm1
+	// C[3,] += a[3] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm11, %ymm11
+	// ymm1 = [a[4], ..., a[4]]
+	vshufps $0x00, %ymm6, %ymm6, %ymm1
+	// C[4,] += a[4] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm12, %ymm12
+	// ymm1 = [a[5], ..., a[5]]
+	vshufps $0x55, %ymm6, %ymm6, %ymm1
+	// C[5,] += a[5] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm13, %ymm13
+	// ymm1 = [a[6], ..., a[6]]
+	vshufps $0xAA, %ymm6, %ymm6, %ymm1
+	// C[6,] += a[6] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm14, %ymm14
+	// ymm1 = [a[7], ..., a[7]]
+	vshufps $0xFF, %ymm6, %ymm6, %ymm1
+	// C[7,] += a[7] * b
+	vmulps %ymm1, %ymm7, %ymm1
+	vaddps %ymm1, %ymm15, %ymm15
+
+	.if (\cnt+1)-\times
+	mult_duffs_macro (\cnt+1), \times
+	.endif
+.endm
+	mult_duffs_through_macro cnt=1, times=8
 	popq %r14
 
 	// create mask to load next C
