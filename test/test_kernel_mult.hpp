@@ -79,20 +79,11 @@ bool run_mult_test(std::mt19937 gen, const kernel_t<FTYPE> &kernel,
 	kernel.mult(&st);
 
 	bool s = false;
-	if (st.a_pack_cur != a_pack_aligned + kernel.m_slice_len * k_len) {
-		std::cerr << "a_pack_cur is incremented by "<<st.a_pack_cur - a_pack_aligned<<", not "<<kernel.m_slice_len * k_len << std::endl;
-		s = true;
-	}
-	if (st.b_pack_cur != b_pack_aligned + kernel.n_slice_len * k_len) {
-		std::cerr << "b_pack_cur is incremented by "<<st.b_pack_cur - b_pack_aligned<<", not "<<kernel.n_slice_len * k_len << std::endl;
-		s = true;
-	}
+	s = check_ptr(st.a_pack_cur, a_pack_aligned, kernel.m_slice_len * k_len) || s;
+	s = check_ptr(st.b_pack_cur, b_pack_aligned, kernel.n_slice_len * k_len) || s;
+	s = check_ptr(st.c_next_cur, c2_next_cur.data(), kernel.n_slice_len);
 	if (st.c_cur != c2_next_cur.data()) {
 		std::cerr << "c_cur is not same as previous c_next_cur";
-		s = true;
-	}
-	if (st.c_next_cur != c2_next_cur.data() + kernel.n_slice_len) {
-		std::cerr << "c_cur is incremented by "<<st.c_cur - c2_cur.data()<<", not "<<kernel.n_slice_len << std::endl;
 		s = true;
 	}
 	s = check_matrix(c1_cur, c2_cur, m_slice_real_len, ldc) || s;

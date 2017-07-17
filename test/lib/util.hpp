@@ -7,12 +7,10 @@
 
 template<typename T>
 constexpr T eps();
-
 template<>
 constexpr float eps() {
 	return 1e-4;
 }
-
 template<>
 constexpr double eps() {
 	return 1e-8;
@@ -57,8 +55,18 @@ bool check_matrix_impl(const std::string &A_name, const std::string &B_name, T A
 		long long M, long long N) {
 	return check_matrix_impl(A_name, B_name, A, B, M, N, N);
 }
-
 #define check_matrix(A, B, ...) check_matrix_impl(#A, #B, A, B, __VA_ARGS__)
 
+template <typename T>
+bool check_ptr_impl(const std::string &p_name, const T *p, const T *base_p, ptrdiff_t d) {
+	ptrdiff_t actual_d = p - base_p;
+	if (actual_d != d) {
+		std::cout << p_name<<" is incremented by "<<actual_d<<", not "<<d << std::endl;
+		return true;
+	} else {
+		return false;
+	}
+}
+#define check_ptr(p, ...) check_ptr_impl(#p, p, __VA_ARGS__)
 
 #endif
