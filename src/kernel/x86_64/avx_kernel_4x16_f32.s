@@ -72,57 +72,57 @@ loadmask:
 	vshufps $0x55, ya, ya, %ymm3
 	// buf[1,0:8] += a[1] * b[0:8]
 	.if \first
-	vmulps %ymm3, %ymm6, %ymm30
-	vaddps -64(%rsi), %ymm30, %ymm30
+	vmulps %ymm3, %ymm6, %ymm10
+	vaddps -64(%rsi), %ymm10, %ymm10
 	.else
 	vmulps %ymm3, %ymm6, %ymm3
-	vaddps %ymm3, %ymm30, %ymm30
+	vaddps %ymm3, %ymm10, %ymm10
 	.endif
 	// buf[1,16:8] += a[1] * b[16:8]
 	.if \first
-	vmulps %ymm3, %ymm7, %ymm31
-	vaddps -32(%rsi), %ymm31, %ymm31
+	vmulps %ymm3, %ymm7, %ymm11
+	vaddps -32(%rsi), %ymm11, %ymm11
 	.else
 	vmulps %ymm3, %ymm7, %ymm3
-	vaddps %ymm3, %ymm31, %ymm31
+	vaddps %ymm3, %ymm11, %ymm11
 	.endif
 
 	// ymm3 = [a[2], ..., a[2]]
 	vshufps $0xAA, ya, ya, %ymm3
 	// buf[2,0:8] += a[2] * b[0:8]
 	.if \first
-	vmulps %ymm3, %ymm6, %ymm32
-	vaddps (%rsi), %ymm32, %ymm32
+	vmulps %ymm3, %ymm6, %ymm12
+	vaddps (%rsi), %ymm12, %ymm12
 	.else
 	vmulps %ymm3, %ymm6, %ymm3
-	vaddps %ymm3, %ymm32, %ymm32
+	vaddps %ymm3, %ymm12, %ymm12
 	.endif
 	// buf[2,16:8] += a[2] * b[16:8]
 	.if \first
-	vmulps %ymm3, %ymm7, %ymm33
-	vaddps 32(%rsi), %ymm33, %ymm33
+	vmulps %ymm3, %ymm7, %ymm13
+	vaddps 32(%rsi), %ymm13, %ymm13
 	.else
 	vmulps %ymm3, %ymm7, %ymm3
-	vaddps %ymm3, %ymm33, %ymm33
+	vaddps %ymm3, %ymm13, %ymm13
 	.endif
 
 	// ymm3 = [a[3], ..., a[3]]
 	vshufps $0xFF, ya, ya, %ymm3
 	// buf[3,0:8] += a[3] * b[0:8]
 	.if \first
-	vmulps %ymm3, %ymm6, %ymm32
-	vaddps (%rsi), %ymm32, %ymm32
+	vmulps %ymm3, %ymm6, %ymm14
+	vaddps 64(%rsi), %ymm14, %ymm14
 	.else
 	vmulps %ymm3, %ymm6, %ymm3
-	vaddps %ymm3, %ymm32, %ymm32
+	vaddps %ymm3, %ymm14, %ymm14
 	.endif
 	// buf[3,16:8] += a[3] * b[16:8]
 	.if \first
-	vmulps %ymm3, %ymm7, %ymm33
-	vaddps 32(%rsi), %ymm33, %ymm33
+	vmulps %ymm3, %ymm7, %ymm15
+	vaddps 96(%rsi), %ymm15, %ymm15
 	.else
 	vmulps %ymm3, %ymm7, %ymm3
-	vaddps %ymm3, %ymm33, %ymm33
+	vaddps %ymm3, %ymm15, %ymm15
 	.endif
 .endm
 
@@ -239,36 +239,28 @@ nanoblas_f32_avx_kernel_mult:
 // 32bytes aligned
 kernel_mult:
 	// stack layout
-	// | temporary (256bytes) | 0 (32bytes) | old r15, r14, r13, r12 | some padding | old rbp | ret addr |
-	//                                         64bytes aligned here -+              +- current rbp
+	// | temporary (256bytes) | old r15, r14, r13, r12 | some padding | old rbp | ret addr |
+	//                           32bytes aligned here -+              +- current rbp
 	pushq %rbp
 	movq %rsp, %rbp
-	andq $-64, %rsp
+	andq $-32, %rsp
 	pushq %r12
 	pushq %r13
 	pushq %r14
 	pushq %r15
-	subq $288, %rsp
+	subq $256, %rsp
 	vxorps %ymm0, %ymm0, %ymm0
-	movl $128, %esi
-	vmovaps %ymm0, (%rsp, %rsi, 2)
+	vmovaps %ymm0, 256(%rsp, %rsi)
 
-	// rsi: c_buf shifted by 128 for shorter instruction encoding
-	addq offset_c_buf(%rdi), %rsi
 	// loop_len_remained: eax
 	movl offset_k_len(%rdi), %eax
-
-	// fetch operands first
-	mult_2fetch_macro
-
 	// r8: c_next_cur
 	// r9: ldc
 	movq offset_c_next_cur(%rdi), %r8
 	movq offset_ldc(%rdi), %r9
 
-
 	// defaults to no packing
-	xorl %r15d, %r15d
+	xorl %r13d, %r13d
 	// if <8, skip prefetch or packing, and inspect where to jump
 	cmpl $8, %eax
 	jl mult_fallback
@@ -302,21 +294,24 @@ kernel_mult:
 	// r10: next_cur
 	movq offset_next_cur(%rsi), %r10
 
-	// r12: interval_k
-	// r13: interval_mn
-	movq offset_interval_k(%rsi), %r12
-	movq offset_interval_mn(%rsi), %r13
-	// r12 < r13 ?
-	xorl %r15d, %r15d
-	cmpq %r13, %r12
-	// if trans required, set r15d 1
-	setb %r15l
-	// r11: max(interval_k, interval_mn)
-	movq %r12, %r11
-	cmovb %r13, %r11
+	// r11: interval_k
+	// r12: interval_mn
+	movq offset_interval_k(%rsi), %r11
+	movq offset_interval_mn(%rsi), %r12
+	// update next_cur now
+	leaq (%r10, %r11, 8), %rcx
+	movq %rcx, offset_next_cur(%rsi)
+
+	// r11 < r12 ?
+	xorl %r13d, %r13d
+	cmpq %r12, %r11
+	// if trans required, set r13d 1
+	setb %r13l
 	// edx: min(interval_k, interval_mn), i.e. slice_len
-	movq %r13, %rdx
-	cmovb %r12, %rdx
+	movq %r12, %rdx
+	cmovb %r11, %rdx
+	// r11: max(interval_k, interval_mn)
+	cmovb %r12, %r11
 	// edx: !slice_len, i.e. count
 	xorl $20, %edx
 
@@ -324,8 +319,8 @@ kernel_mult:
 	xorl %ecx, %ecx
 	cmpl $16, %edx
 	sete %cl
-	// encode conditions to r15l
-	leal -1(%r15, %rcx, 2), %r15l
+	// encode conditions to r13l
+	leal -2(%rcx, %r13, 4), %r13l
 
 	// ecx: min(remained_len, count)
 	movl offset_remained_len(%rsi), %ecx
@@ -333,76 +328,80 @@ kernel_mult:
 	cmovg %edx, %ecx
 	// update remained_len now
 	subl %ecx, offset_remained_len(%rsi)
-	// r13: next_pack_cur
-	movq offset_next_pack_cur(%rsi), %r13
-	// update next_cur now
-	movl %ecx, %edx
-	shll %5, %edx
-	movl %edx, next_pack_cur(%rsi)
+	// r12: next_pack_cur
+	movq offset_next_pack_cur(%rsi), %r12
+	// ecx is moved to r15
+	// update next_pack_cur now
+	movl %ecx, %r15d
+	shll %5, %ecx
+	addq %rcx, next_pack_cur(%rsi)
 
-	// set load len to r12d, and set load wide to ecx
-	testl %r15l, %r15l
-	movl %ecx, %r12d
-	cmovp next_slice_real_len(%rsi), %ecx
-	cmovnp next_slice_real_len(%rsi), %r12d
-	// create mask to load
-	negq %rcx
-	leaq loadmask(%rip), %rdx
-	vmovups (%rdx, %rsi, 4), %ymm1
+	// r14d: next_slice_len
+	movl next_slice_real_len(%rsi), %r14d
 
-
-
-	// set flag to eax
-	sete %cl
-	// r12: 3*interval_m_or_k
-	// r13: 4*interval_m_or_k
-	leaq (%r11, %r11), %r12
-	leaq (%r12, %r12), %r13
-	addq %r11, %r12
+	// rcx: 1*max(interval_k, interval_mn)
+	// rdx: 3*max(interval_k, interval_mn)
+	movq %r11, %rcx
+	leaq (%rcx, %rcx), %rdx
+	addq %rcx, %rdx
 
 	// prefetch 4
 	prefetcht1 (%r10)
-	prefetcht1 (%r10, %r11)
-	prefetcht1 (%r10, %r11, 2)
-	prefetcht1 (%r10, %r12)
+	prefetcht1 (%r10, %rcx)
+	prefetcht1 (%r10, %rcx, 2)
+	prefetcht1 (%r10, %rdx)
 
-	// clear ecx
-	xorl %ecx, %ecx
-	// 4 or 16
-	cmpq $4, offset_slice_len(%r15)
-	sete %dl
-	xorl %edx, %ecx
-	jz mult_first
-	// tag r15
-	orq %rcx, %r15
+	// if 4, skip
+	testl %r13l, %r13l
+	jp prefetch_end
 
 	// prefetch 16
-	addq %r13, %r10
-	prefetcht1 (%r10)
-	prefetcht1 (%r10, %r11)
-	prefetcht1 (%r10, %r11, 2)
-	prefetcht1 (%r10, %r12)
-	addq %r13, %r10
-	prefetcht1 (%r10)
-	prefetcht1 (%r10, %r11)
-	prefetcht1 (%r10, %r11, 2)
-	prefetcht1 (%r10, %r12)
-	addq %r13, %r10
-	prefetcht1 (%r10)
-	prefetcht1 (%r10, %r11)
-	prefetcht1 (%r10, %r11, 2)
-	prefetcht1 (%r10, %r12)
+	// use lea to prevent from flag overwrite
+	leaq (%r10, %rcx, 4), %rsi
+	prefetcht1 (%rsi)
+	prefetcht1 (%rsi, %rcx)
+	prefetcht1 (%rsi, %rcx, 2)
+	leaq (%rsi, %rdx), %rsi
+	prefetcht1 (%rsi)
+	prefetcht1 (%rsi, %rcx)
+	prefetcht1 (%rsi, %rcx, 2)
+	prefetcht1 (%rsi, %rdx)
+	leaq (%rsi, %rcx, 4), %rsi
+	prefetcht1 (%rsi)
+	prefetcht1 (%rsi, %rcx)
+	prefetcht1 (%rsi, %rcx, 2)
+	prefetcht1 (%rsi, %rdx)
+	prefetcht1 (%rsi, %rcx, 4)
+
+prefetch_end:
+	// the flag set by test above is preserved
+	// set load count to r15d, and set load wide to ecx
+	movl %r15d, %ecx
+	// no trans
+	cmovs %r14d, %ecx
+	// trans
+	cmovns %r14d, %r15d
+
+	// create mask to load
+	negq %rcx
+	orq $-8, %rcx
+	leaq loadmask(%rip), %rdx
+	vmovups (%rdx, %rsi, 4), %ymm1
 
 mult_first:
 	// rcx: a_cur, rdx: b_cur
 	movq offset_a_pack_cur(%rdi), %rcx
 	movq offset_b_pack_cur(%rdi), %rdx
+	// rsi: c_buf
+	movq offset_c_buf(%rdi), %rsi
+
 	// update cur now
 	movl %eax, %r15d
 	shll $5, %r15d
 	addq %r15, offset_a_pack_cur(%rdi)
 	addq %r15, offset_b_pack_cur(%rdi)
 
+	mult_2fetch_macro
 	mult_2fma_macro first=1
 
 mult_main:
@@ -438,54 +437,21 @@ mult_load_c_loop:
 	subl $1, %eax
 	jnz mult_load_c_loop
 
-	testq %r15, %r15
+	// packing check
+	testl %r13d, %r13d
 	jz mult_store_c
-	jp mult_pack_trans
 
-mult_pack_no_trans:
-	// eax: min(remained_len, !slice_len), rsi: next_pack_cur+128
-
-	// create mask to load
-	movq offset_next_slice_real_len(%r15), %esi
-	negq %rsi
-	leaq loadmask(%rip), %r8
-	vmovups (%r8, %rsi, 4), %ymm0
-
-	// esi: !slice_len
-	movl $20, %esi
-	xorl offset_slice_len(%r15), %esi
-	// eax: min(remained_len, !slice_len)
-	movl offset_remained_len(%r15), %eax
-	cmpl %esi, %eax
-	cmovg %esi, %eax
-	// update remained_len now
-	subl %esi, offset_remained_len(%r15)
-
-	// r14d: !slice_len
-	movl %esi, %r14d
-
-	// update next_pack_cur now
-	movq offset_next_pack_cur(%r15), %r8
-	movl %eax, %esi
-	shll $5, %esi
-	addq %rsi, offset_next_pack_cur(%r15)
-	// rsi: next_pack_cur+128
-	leaq 128(%r8), %rsi
-
-	// r10: next_cur (already set)
-	// r11: interval (already set)
-	// update next_cur now
-	movq offset_interval_k(%r15), %r8
-	leaq (%r10, %r8, 8), %r9
-	movq %r9, offset_next_cur(%r15)
-
-mult_pack_trans:
-	// eax: next_slice_real_len,  r10d: min(remained_len, 8), rsi: rsp+128  (trans)
-
-	andq $0, %r15
+	// move load count to eax
+	movq %r15d, %eax
+	// move next_pack_cur to rsi
+	movq %r12, %rsi
+	// if trans, set rsp to rsi
+	cmovns %rsp, %rsi
+	// 4 or 16
+	jnp mult_pack_16
 
 mult_pack_4:
-	leaq (%r11, %r11), %r12
+	leaq (%r11, %r11), %r8
 mult_pack_4_loop:
 	mult_2fetch_macro
 	mult_2fma_macro
@@ -495,13 +461,13 @@ mult_pack_4_loop:
 	vmovaps %xmm1, (%rsi)
 	vmaskmovps %xmm0, (%r10, %r11), %xmm1
 	vmovaps %xmm1, 16(%rsi)
-	addq %r12, %r10
+	addq %r8, %r10
 	addq $32, %rsi
 	subl $1, %eax
 	jnz mult_pack_4_loop
 
-	testl %r15d, %r15d
-	jz mult_store
+	testl %r12d, %r12d
+	js mult_store
 
 mult_trans_4:
 	// transpose algorithm is from
@@ -575,8 +541,8 @@ mult_pack_16:
 	subl $1, %eax
 	jnz mult_pack_16
 
-	testl %r15, %r15
-	jz mult_store
+	testl %r12d, %r12d
+	js mult_store
 
 mult_trans_16:
 	movq %r13, %rcx
