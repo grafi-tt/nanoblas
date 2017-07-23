@@ -283,6 +283,14 @@ kernel_mult:
 	prefetcht1 (%rsi, %rcx)
 	prefetcht1 (%rsi, %rdx)
 
+	// create mask to load next C
+	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
+	//    #(8 - n_slice_real_len) #n_slice_rean_len
+	movl offset_n_next_slice_real_len(%rdi), %rsi
+	negq %rsi
+	leaq loadmask(%rip), %r14
+	vmovups (%r14, %r13, 4), %ymm0
+
 	// packing check
 	movl offset_current_prepack(%rdi), %rsi
 	testl %esi, %esi
@@ -312,7 +320,7 @@ kernel_mult:
 	cmovb %r11, %rdx
 	// r11: max(interval_k, interval_mn)
 	cmovb %r12, %r11
-	// edx: !slice_len, i.e. count
+	1/ edx: !slice_len, i.e. count
 	xorl $20, %edx
 
 	// set ecx 1 if count is 16
@@ -385,8 +393,8 @@ prefetch_end:
 	// create mask to load
 	negq %rcx
 	orq $-8, %rcx
-	leaq loadmask(%rip), %rdx
-	vmovups (%rdx, %rsi, 4), %ymm1
+	leaq loadmask(%rip), %rsi
+	vmovups (%rsi, %rcx, 4), %ymm1
 
 mult_first:
 	// rcx: a_cur, rdx: b_cur
@@ -413,25 +421,14 @@ mult_main:
 	jnz mult_main
 
 mult_load_c:
-	// create mask to load next C
-	// ymm0 will be hi[0, ..., 0, -1, ..., -1]lo
-	//    #(8 - n_slice_real_len) #n_slice_rean_len
-	movl offset_n_next_slice_real_len(%rdi), %r13d
-	negq %r13
-	leaq loadmask(%rip), %r14
-	vmovups (%r14, %r13, 4), %ymm0
-	// load limit
-	movl offset_m_next_slice_real_len(%rdi), %eax
-
-mult_load_c_loop:
 	mult_2fetch_macro
 	mult_2fma_macro
 	addq $64, %rcx
 	addq $64, %rdx
-	vmovups (%r8), %ymm1
-	vmovaps %ymm1, (%rsi)
-	vmaskmovps %ymm0, 32(%r8), %ymm1
-	vmovaps %ymm1, 32(%rsi)
+	vmovups (%r8), %ymm2
+	vmovaps %ymm2, (%rsi)
+	vmaskmovps %ymm0, 32(%r8), %ymm2
+	vmovaps %ymm2, 32(%rsi)
 	addq %r9, %r8
 	addq $64, %rsi
 	subl $1, %eax
@@ -457,10 +454,10 @@ mult_pack_4_loop:
 	mult_2fma_macro
 	addq $64, %rcx
 	addq $64, %rdx
-	vmaskmovps %xmm0, (%r10), %xmm1
-	vmovaps %xmm1, (%rsi)
-	vmaskmovps %xmm0, (%r10, %r11), %xmm1
-	vmovaps %xmm1, 16(%rsi)
+	vmaskmovps %xmm1, (%r10), %xmm2
+	vmovaps %xmm2, (%rsi)
+	vmaskmovps %xmm1, (%r10, %r11), %xmm2
+	vmovaps %xmm2, 16(%rsi)
 	addq %r8, %r10
 	addq $32, %rsi
 	subl $1, %eax
